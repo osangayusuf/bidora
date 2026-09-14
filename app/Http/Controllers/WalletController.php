@@ -38,12 +38,12 @@ class WalletController extends Controller
             'transactions' => PointTransactionResource::collection(
                 $this->walletPageService->paginateTransactions($user),
             ),
-            'availablePlans' => PaystackPlanResource::collection(
-                $this->walletPageService->availablePlans(),
-            ),
-            'subscriptions' => PointSubscriptionResource::collection(
-                $this->walletPageService->subscriptions($user),
-            ),
+            'availablePlans' => $this->walletPageService->availablePlans()
+                ->map(fn ($plan) => (new PaystackPlanResource($plan))->resolve())
+                ->values(),
+            'subscriptions' => $this->walletPageService->subscriptions($user)
+                ->map(fn ($subscription) => (new PointSubscriptionResource($subscription))->resolve())
+                ->values(),
             'paymentStatus' => $request->query('payment'),
             'paymentReference' => $request->query('reference'),
         ]);

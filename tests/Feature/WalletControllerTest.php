@@ -2,6 +2,7 @@
 
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
+use App\Models\PaystackPlan;
 use App\Models\PaystackTransaction;
 use App\Models\PointTransaction;
 use App\Models\User;
@@ -11,9 +12,47 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
+/**
+ * assertInertia() inspects the PHP props before they're JSON-encoded, so it
+ * can't catch a bug where a Resource/ResourceCollection prop gets wrapped
+ * in a "data" envelope by Laravel's Responsable handling on the way out
+ * over the wire (exactly what shipped and broke availablePlans/subscriptions
+ * on the live Wallet page). Decode the same embedded JSON the browser gets
+ * to actually exercise that path.
+ */
+function decodeInertiaPageJson(string $html): array
+{
+    preg_match('/data-page="[^"]*"[^>]*>(.*?)<\/script>/s', $html, $matches);
+
+    return json_decode(html_entity_decode($matches[1]), true);
+}
+
 test('guests are redirected when visiting wallet', function () {
     $this->get(route('wallet'))
         ->assertRedirect(route('login'));
+});
+
+test('availablePlans and subscriptions are plain arrays on the wire, not wrapped in a data envelope', function () {
+    PaystackPlan::create([
+        'amount_kobo' => 10000,
+        'interval' => 'weekly',
+        'plan_code' => 'PLN_wire_test',
+        'name' => 'Bidora Weekly Top-up ₦100',
+    ]);
+
+    $user = User::factory()->create();
+
+    $html = $this->actingAs($user)->get(route('wallet'))->getContent();
+    $page = decodeInertiaPageJson($html);
+
+    expect($page['props']['availablePlans'])->toBeArray();
+    expect(array_is_list($page['props']['availablePlans']))->toBeTrue();
+    expect($page['props']['availablePlans'])->toHaveCount(1);
+    expect($page['props']['availablePlans'][0]['amount_naira'])->toEqual(100);
+    expect($page['props']['availablePlans'][0]['frequency'])->toBe('weekly');
+
+    expect($page['props']['subscriptions'])->toBeArray();
+    expect(array_is_list($page['props']['subscriptions']))->toBeTrue();
 });
 
 test('authenticated users can view wallet page', function () {
