@@ -5,6 +5,7 @@ import {
     Users,
     Coins,
     CreditCard,
+    Repeat,
     Star,
     Settings,
     LogOut,
@@ -25,6 +26,7 @@ import { index as auctionsIndex } from '@/routes/admin/auctions';
 import { index as bidsIndex } from '@/routes/admin/bids';
 import { index as metricsIndex } from '@/routes/admin/metrics';
 import { index as paystackTransactionsIndex } from '@/routes/admin/paystack-transactions';
+import { index as pointSubscriptionsIndex } from '@/routes/admin/point-subscriptions';
 import { index as pointTransactionsIndex } from '@/routes/admin/point-transactions';
 import { index as reviewsIndex } from '@/routes/admin/reviews';
 import { index as rewardsConfigIndex } from '@/routes/admin/rewards-config';
@@ -60,6 +62,11 @@ const navItems = [
         name: 'Paystack Logs',
         href: paystackTransactionsIndex.url(),
         icon: CreditCard,
+    },
+    {
+        name: 'Subscriptions',
+        href: pointSubscriptionsIndex.url(),
+        icon: Repeat,
     },
     { name: 'Reviews', href: reviewsIndex.url(), icon: Star },
     { name: 'Rewards Config', href: rewardsConfigIndex.url(), icon: Settings },

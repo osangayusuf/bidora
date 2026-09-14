@@ -37,9 +37,13 @@ test('authenticated users can view wallet page', function () {
             ->component('Wallet/Index')
             ->has('balances')
             ->has('walletConfig')
+            ->has('availablePlans')
+            ->has('subscriptions')
             ->has('transactions.data', 1)
             ->where('balances.points_balance', 500)
             ->where('balances.bonus_points', 100)
+            ->where('walletConfig.one_off_deposits_enabled', false)
+            ->where('walletConfig.recurring_enabled', true)
         );
 });
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AgentController;
 use App\Http\Controllers\Admin\AuctionController as AdminAuctionController;
 use App\Http\Controllers\Admin\MetricsController;
 use App\Http\Controllers\Admin\PaystackTransactionController;
+use App\Http\Controllers\Admin\PointSubscriptionController;
 use App\Http\Controllers\Admin\PointTransactionController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\RewardsConfigController;
@@ -34,6 +35,7 @@ use App\Http\Controllers\TaskCenterController;
 use App\Http\Controllers\TermsController;
 use App\Http\Controllers\TrendingController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\WalletSubscriptionController;
 use App\Http\Controllers\WinnersController;
 use App\Http\Middleware\EnsureTermsAccepted;
 use Illuminate\Support\Facades\Route;
@@ -71,6 +73,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('wallet', [WalletController::class, 'index'])->name('wallet');
     Route::get('wallet/payment/callback', [WalletController::class, 'paymentCallback'])->name('wallet.payment.callback');
     Route::post('wallet/deposit', [WalletController::class, 'deposit'])->name('wallet.deposit');
+    Route::post('wallet/subscriptions', [WalletSubscriptionController::class, 'store'])->name('wallet.subscriptions.store');
+    Route::delete('wallet/subscriptions/{subscription}', [WalletSubscriptionController::class, 'destroy'])->name('wallet.subscriptions.destroy');
+    Route::get('wallet/subscriptions/{subscription}/manage-card', [WalletSubscriptionController::class, 'manageCard'])->name('wallet.subscriptions.manage-card');
     Route::get('tasks', [TaskCenterController::class, 'index'])->name('tasks');
     Route::post('checkin', [CheckinController::class, 'store'])->name('checkin');
     Route::get('profile', [ProfileController::class, 'index'])->name('profile');
@@ -128,6 +133,11 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::get('point-transactions', [PointTransactionController::class, 'index'])->name('point-transactions.index');
         Route::get('paystack-transactions', [PaystackTransactionController::class, 'index'])->name('paystack-transactions.index');
         Route::post('paystack-transactions/{transaction}/requery', [PaystackTransactionController::class, 'requery'])->name('paystack-transactions.requery');
+
+        // Recurring Point Subscriptions
+        Route::get('point-subscriptions', [PointSubscriptionController::class, 'index'])->name('point-subscriptions.index');
+        Route::post('point-subscriptions/{subscription}/cancel', [PointSubscriptionController::class, 'cancel'])->name('point-subscriptions.cancel');
+        Route::post('point-subscriptions/{subscription}/resync', [PointSubscriptionController::class, 'resync'])->name('point-subscriptions.resync');
 
         // Reviews Moderation
         Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');

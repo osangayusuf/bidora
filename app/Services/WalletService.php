@@ -21,8 +21,14 @@ class WalletService
     /**
      * Process a user deposit, converting Naira to Points.
      */
-    public function processDeposit(User $user, float $nairaAmount, string $reference, array $metadata = [], ?int $paystackTransactionId = null): PointTransaction
-    {
+    public function processDeposit(
+        User $user,
+        float $nairaAmount,
+        string $reference,
+        array $metadata = [],
+        ?int $paystackTransactionId = null,
+        ?int $pointSubscriptionId = null,
+    ): PointTransaction {
         $existing = PointTransaction::query()
             ->where('provider_reference', $reference)
             ->where('type', TransactionType::DEPOSIT)
@@ -32,7 +38,7 @@ class WalletService
             return $existing;
         }
 
-        return DB::transaction(function () use ($user, $nairaAmount, $reference, $metadata, $paystackTransactionId) {
+        return DB::transaction(function () use ($user, $nairaAmount, $reference, $metadata, $paystackTransactionId, $pointSubscriptionId) {
             $exchangeRate = (float) config('points.points_per_naira');
             $pointsAmount = $nairaAmount * $exchangeRate;
 
@@ -50,6 +56,7 @@ class WalletService
             $transaction = PointTransaction::create([
                 'user_id' => $user->id,
                 'paystack_transaction_id' => $paystackTransactionId,
+                'point_subscription_id' => $pointSubscriptionId,
                 'type' => TransactionType::DEPOSIT,
                 'amount' => $pointsAmount,
                 'naira_amount' => $nairaAmount,
@@ -82,7 +89,7 @@ class WalletService
     /**
      * Finalize a Paystack deposit after inline payment or callback verification.
      */
-    public function finalizePaystackDeposit(User $user, string $reference, array $paystackData): ?PointTransaction
+    public function finalizePaystackDeposit(User $user, string $reference, array $paystackData, ?int $pointSubscriptionId = null): ?PointTransaction
     {
         $status = $paystackData['status'] ?? null;
 
@@ -104,6 +111,7 @@ class WalletService
             $reference,
             $paystackData,
             $paystackTransaction?->id,
+            $pointSubscriptionId,
         );
 
         if ($paystackTransaction !== null && $paystackTransaction->status !== 'success') {

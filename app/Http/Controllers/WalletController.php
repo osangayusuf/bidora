@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Enums\ActivityType;
 use App\Http\Requests\Wallet\ClaimBonusRequest;
 use App\Http\Requests\Wallet\DepositRequest;
+use App\Http\Resources\PaystackPlanResource;
+use App\Http\Resources\PointSubscriptionResource;
 use App\Http\Resources\PointTransactionResource;
 use App\Services\ActivityService;
 use App\Services\PaystackService;
+use App\Services\RecurringPaymentService;
 use App\Services\WalletPageService;
 use App\Services\WalletService;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +25,7 @@ class WalletController extends Controller
         private readonly WalletService $walletService,
         private readonly PaystackService $paystackService,
         private readonly ActivityService $activityService,
+        private readonly RecurringPaymentService $recurringPaymentService,
     ) {}
 
     public function index(Request $request): Response
@@ -33,6 +37,12 @@ class WalletController extends Controller
             'walletConfig' => $this->walletPageService->walletConfig(),
             'transactions' => PointTransactionResource::collection(
                 $this->walletPageService->paginateTransactions($user),
+            ),
+            'availablePlans' => PaystackPlanResource::collection(
+                $this->walletPageService->availablePlans(),
+            ),
+            'subscriptions' => PointSubscriptionResource::collection(
+                $this->walletPageService->subscriptions($user),
             ),
             'paymentStatus' => $request->query('payment'),
             'paymentReference' => $request->query('reference'),
@@ -89,7 +99,9 @@ class WalletController extends Controller
             abort(403);
         }
 
-        $transaction = $this->walletService->finalizePaystackDeposit($user, $reference, $paystackData);
+        $subscription = $this->recurringPaymentService->resolveSubscriptionForCharge($paystackData);
+
+        $transaction = $this->walletService->finalizePaystackDeposit($user, $reference, $paystackData, $subscription?->id);
 
         if ($transaction !== null && $transaction->wasRecentlyCreated) {
             $this->activityService->log(ActivityType::POINTS_DEPOSITED, $user, $transaction);

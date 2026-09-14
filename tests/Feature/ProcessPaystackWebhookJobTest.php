@@ -4,10 +4,17 @@ use App\Jobs\ProcessPaystackWebhookJob;
 use App\Models\PaystackTransaction;
 use App\Models\PaystackWebhookLog;
 use App\Models\User;
+use App\Services\PaystackService;
+use App\Services\RecurringPaymentService;
 use App\Services\WalletService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
+
+function processWebhookLog(ProcessPaystackWebhookJob $job): void
+{
+    $job->handle(new WalletService, new RecurringPaymentService(new PaystackService));
+}
 
 it('processes a pending webhook log and updates existing transaction', function () {
     $user = User::factory()->create(['points_balance' => 0]);
@@ -33,7 +40,7 @@ it('processes a pending webhook log and updates existing transaction', function 
     ]);
 
     $job = new ProcessPaystackWebhookJob($log->id);
-    $job->handle(new WalletService);
+    processWebhookLog($job);
 
     $log->refresh();
     $transaction->refresh();
@@ -64,7 +71,7 @@ it('creates transaction if missing but user email in payload', function () {
     ]);
 
     $job = new ProcessPaystackWebhookJob($log->id);
-    $job->handle(new WalletService);
+    processWebhookLog($job);
 
     $transaction = PaystackTransaction::where('reference', 'ref_abc')->first();
 
@@ -82,7 +89,7 @@ it('ignores already processed webhook logs', function () {
     ]);
 
     $job = new ProcessPaystackWebhookJob($log->id);
-    $job->handle(new WalletService);
+    processWebhookLog($job);
 
     // Should return early and not fail or change status
     expect($log->fresh()->status)->toBe('processed');
