@@ -1,0 +1,21 @@
+<?php
+
+namespace App\Enums;
+
+/**
+ * Values are intentionally identical to Paystack's Plan `interval` values,
+ * so no mapping is needed when talking to the Paystack API.
+ */
+enum SubscriptionFrequency: string
+{
+    case WEEKLY = 'weekly';
+    case MONTHLY = 'monthly';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::WEEKLY => 'Weekly',
+            self::MONTHLY => 'Monthly',
+        };
+    }
+}

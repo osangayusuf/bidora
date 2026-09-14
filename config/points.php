@@ -65,4 +65,28 @@ return [
     */
     'registration_points' => env('REGISTRATION_POINTS', 50),
 
+    /*
+    |--------------------------------------------------------------------------
+    | One-off Deposits
+    |--------------------------------------------------------------------------
+    | The original single-charge "buy points" flow. Kept fully functional
+    | (routes, controller, services) so it can be re-enabled without a code
+    | change, but hidden from the Wallet page for regular users while the
+    | platform is subscription-only. Does not affect admin screens.
+    */
+    'one_off_deposits_enabled' => env('ONE_OFF_DEPOSITS_ENABLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Recurring Point Subscriptions
+    |--------------------------------------------------------------------------
+    | Paystack Plans/Subscriptions-backed recurring top-ups. Each enabled
+    | frequency is combined with every amount in `deposit_presets` to form
+    | the plan matrix seeded by `php artisan paystack:sync-plans`.
+    */
+    'recurring' => [
+        'enabled' => env('RECURRING_DEPOSITS_ENABLED', true),
+        'frequencies' => ['weekly', 'monthly'],
+    ],
+
 ];

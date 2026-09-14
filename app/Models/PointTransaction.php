@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'user_id',
     'paystack_transaction_id',
+    'point_subscription_id',
     'type',
     'amount',
     'naira_amount',
@@ -33,5 +34,10 @@ class PointTransaction extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function subscription(): BelongsTo
+    {
+        return $this->belongsTo(PointSubscription::class, 'point_subscription_id');
     }
 }

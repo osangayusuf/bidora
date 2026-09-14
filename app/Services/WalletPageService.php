@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\PaystackPlan;
+use App\Models\PointSubscription;
 use App\Models\PointTransaction;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 
 class WalletPageService
 {
@@ -20,6 +23,8 @@ class WalletPageService
             'max_deposit_naira' => (int) config('points.max_deposit_naira'),
             'deposit_presets' => config('points.deposit_presets', [1000]),
             'paystack_public_key' => config('services.paystack.public'),
+            'one_off_deposits_enabled' => (bool) config('points.one_off_deposits_enabled'),
+            'recurring_enabled' => (bool) config('points.recurring.enabled'),
         ];
     }
 
@@ -44,5 +49,31 @@ class WalletPageService
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    /**
+     * The plan matrix (amount x frequency) users can subscribe to, ordered
+     * for a sensible UI grouping.
+     *
+     * @return Collection<int, PaystackPlan>
+     */
+    public function availablePlans(): Collection
+    {
+        return PaystackPlan::query()
+            ->orderBy('amount_kobo')
+            ->orderBy('interval')
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, PointSubscription>
+     */
+    public function subscriptions(User $user): Collection
+    {
+        return PointSubscription::query()
+            ->where('user_id', $user->id)
+            ->with('plan')
+            ->latest()
+            ->get();
     }
 }

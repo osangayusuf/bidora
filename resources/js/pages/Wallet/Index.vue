@@ -6,11 +6,14 @@ import SettingsShell from '@/components/settings/SettingsShell.vue';
 import WalletBalanceCards from '@/components/wallet/WalletBalanceCards.vue';
 import WalletClaimBonus from '@/components/wallet/WalletClaimBonus.vue';
 import WalletDepositForm from '@/components/wallet/WalletDepositForm.vue';
+import WalletRecurringSection from '@/components/wallet/WalletRecurringSection.vue';
 import WalletTransactionsSection from '@/components/wallet/WalletTransactionsSection.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { appToast } from '@/lib/appToast';
 import { wallet as walletRoute } from '@/routes/index';
 import type {
+    PaystackPlanListing,
+    PointSubscriptionListing,
     WalletBalances,
     WalletConfig,
     WalletTransactionsPaginator,
@@ -22,6 +25,8 @@ const props = defineProps<{
     balances: WalletBalances;
     walletConfig: WalletConfig;
     transactions: WalletTransactionsPaginator;
+    availablePlans: PaystackPlanListing[];
+    subscriptions: PointSubscriptionListing[];
     paymentStatus?: string | null;
     paymentReference?: string | null;
 }>();
@@ -70,7 +75,15 @@ watch(
                     :balances="balances"
                     :wallet-config="walletConfig"
                 />
-                <WalletDepositForm :wallet-config="walletConfig" />
+                <WalletRecurringSection
+                    v-if="walletConfig.recurring_enabled"
+                    :available-plans="availablePlans"
+                    :subscriptions="subscriptions"
+                />
+                <WalletDepositForm
+                    v-if="walletConfig.one_off_deposits_enabled"
+                    :wallet-config="walletConfig"
+                />
                 <WalletClaimBonus :bonus-points="balances.bonus_points" />
                 <WalletTransactionsSection :transactions="transactions" />
             </div>
