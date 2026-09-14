@@ -35,9 +35,14 @@ class WalletController extends Controller
         return Inertia::render('Wallet/Index', [
             'balances' => $this->walletPageService->balances($user),
             'walletConfig' => $this->walletPageService->walletConfig(),
-            'transactions' => PointTransactionResource::collection(
-                $this->walletPageService->paginateTransactions($user),
-            ),
+            // Transform items in place rather than wrapping in
+            // PointTransactionResource::collection(): that returns a
+            // ResourceCollection, which Inertia's Responsable handling
+            // wraps in a "data" envelope over the wire — through() keeps
+            // this a plain LengthAwarePaginator, matching the flat shape
+            // the frontend expects (see PR #6).
+            'transactions' => $this->walletPageService->paginateTransactions($user)
+                ->through(fn ($transaction) => (new PointTransactionResource($transaction))->resolve()),
             'availablePlans' => $this->walletPageService->availablePlans()
                 ->map(fn ($plan) => (new PaystackPlanResource($plan))->resolve())
                 ->values(),
