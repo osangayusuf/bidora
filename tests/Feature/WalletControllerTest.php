@@ -2,6 +2,7 @@
 
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
+use App\Models\PaystackPlan;
 use App\Models\PaystackTransaction;
 use App\Models\PointTransaction;
 use App\Models\User;
@@ -11,9 +12,76 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
+/**
+ * assertInertia() inspects the PHP props before they're JSON-encoded, so it
+ * can't catch a bug where a Resource/ResourceCollection prop gets wrapped
+ * in a "data" envelope by Laravel's Responsable handling on the way out
+ * over the wire (exactly what shipped and broke availablePlans/subscriptions
+ * on the live Wallet page). Decode the same embedded JSON the browser gets
+ * to actually exercise that path.
+ */
+function decodeInertiaPageJson(string $html): array
+{
+    preg_match('/data-page="[^"]*"[^>]*>(.*?)<\/script>/s', $html, $matches);
+
+    return json_decode(html_entity_decode($matches[1]), true);
+}
+
 test('guests are redirected when visiting wallet', function () {
     $this->get(route('wallet'))
         ->assertRedirect(route('login'));
+});
+
+test('availablePlans and subscriptions are plain arrays on the wire, not wrapped in a data envelope', function () {
+    PaystackPlan::create([
+        'amount_kobo' => 10000,
+        'interval' => 'weekly',
+        'plan_code' => 'PLN_wire_test',
+        'name' => 'Bidora Weekly Top-up ₦100',
+    ]);
+
+    $user = User::factory()->create();
+
+    $html = $this->actingAs($user)->get(route('wallet'))->getContent();
+    $page = decodeInertiaPageJson($html);
+
+    expect($page['props']['availablePlans'])->toBeArray();
+    expect(array_is_list($page['props']['availablePlans']))->toBeTrue();
+    expect($page['props']['availablePlans'])->toHaveCount(1);
+    expect($page['props']['availablePlans'][0]['amount_naira'])->toEqual(100);
+    expect($page['props']['availablePlans'][0]['frequency'])->toBe('weekly');
+
+    expect($page['props']['subscriptions'])->toBeArray();
+    expect(array_is_list($page['props']['subscriptions']))->toBeTrue();
+});
+
+test('transactions keep the flat paginator shape on the wire, not a nested data/meta envelope', function () {
+    $user = User::factory()->create();
+
+    PointTransaction::create([
+        'user_id' => $user->id,
+        'type' => TransactionType::DEPOSIT,
+        'amount' => 1000,
+        'naira_amount' => 100,
+        'exchange_rate' => 10,
+        'provider_reference' => 'ref_wire_shape',
+        'status' => TransactionStatus::COMPLETED,
+    ]);
+
+    $html = $this->actingAs($user)->get(route('wallet'))->getContent();
+    $page = decodeInertiaPageJson($html);
+    $transactions = $page['props']['transactions'];
+
+    // The frontend (WalletTransactionsSection.vue) reads these flat, not
+    // nested under "meta" — Laravel's own LengthAwarePaginator::toArray()
+    // shape, not the JSON:API-style resource-collection wrapping.
+    expect($transactions['data'])->toBeArray();
+    expect(array_is_list($transactions['data']))->toBeTrue();
+    expect($transactions['data'])->toHaveCount(1);
+    expect($transactions['data'][0]['provider_reference'])->toBe('ref_wire_shape');
+    expect($transactions)->toHaveKey('current_page');
+    expect($transactions)->toHaveKey('last_page');
+    expect($transactions)->not->toHaveKey('meta');
 });
 
 test('authenticated users can view wallet page', function () {
