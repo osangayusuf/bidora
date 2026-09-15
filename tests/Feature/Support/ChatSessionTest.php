@@ -13,6 +13,7 @@ use App\Models\AgentStatus;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\User;
+use Illuminate\Contracts\Broadcasting\Broadcaster;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 
@@ -46,15 +47,17 @@ test('customers and guests can initiate a chat session', function () {
     $guestResponse = $this->post(route('support.chat.api.initiate'), [
         'name' => 'Guest User',
         'email' => 'guest@example.com',
+        'message' => 'Hi, I need help with my order.',
     ]);
 
     $guestResponse->assertOk()
-        ->assertJsonStructure(['uuid', 'customer_name', 'customer_email', 'status'])
+        ->assertJsonStructure(['uuid', 'customer_name', 'customer_email', 'status', 'messages'])
         ->assertJson([
             'customer_name' => 'Guest User',
             'customer_email' => 'guest@example.com',
             'status' => 'waiting',
-        ]);
+        ])
+        ->assertJsonCount(1, 'messages');
 
     $guestUuid = $guestResponse->json('uuid');
     expect(session('active_chat_session'))->toBe($guestUuid);
@@ -64,12 +67,20 @@ test('customers and guests can initiate a chat session', function () {
         'status' => 'waiting',
     ]);
 
+    $this->assertDatabaseHas('chat_messages', [
+        'chat_session_id' => ChatSession::where('uuid', $guestUuid)->value('id'),
+        'sender_type' => 'customer',
+        'body' => 'Hi, I need help with my order.',
+    ]);
+
     // Customer (authenticated user) initiation
     $customer = User::factory()->create();
     $customer->assignRole('user');
 
     $customerResponse = $this->actingAs($customer)
-        ->post(route('support.chat.api.initiate'));
+        ->post(route('support.chat.api.initiate'), [
+            'message' => 'Hello, quick question about points.',
+        ]);
 
     $customerResponse->assertOk()
         ->assertJson([
@@ -79,6 +90,26 @@ test('customers and guests can initiate a chat session', function () {
         ]);
 
     Event::assertDispatched(NewChatSessionCreated::class);
+});
+
+test('a chat session cannot be initiated without an opening message', function () {
+    Event::fake();
+
+    // No session/message should be created at all — this is exactly the scenario that used
+    // to leave agents an empty, message-less session in the queue.
+    $this->post(route('support.chat.api.initiate'), [
+        'name' => 'Guest User',
+        'email' => 'guest@example.com',
+    ])->assertInvalid(['message']);
+
+    $this->assertDatabaseCount('chat_sessions', 0);
+
+    $customer = User::factory()->create();
+    $this->actingAs($customer)
+        ->post(route('support.chat.api.initiate'))
+        ->assertInvalid(['message']);
+
+    $this->assertDatabaseCount('chat_sessions', 0);
 });
 
 test('unauthorized users cannot access or send messages to a chat session', function () {
@@ -157,7 +188,7 @@ test('a chat message is still saved and returned even if broadcasting it fails',
     // message even though the customer's fetch appeared to succeed. See ChatService::addMessage()
     // and ::safeBroadcast().
     app('Illuminate\Broadcasting\BroadcastManager')->extend('failing', function () {
-        return new class implements \Illuminate\Contracts\Broadcasting\Broadcaster
+        return new class implements Broadcaster
         {
             public function auth($request) {}
 
@@ -165,7 +196,7 @@ test('a chat message is still saved and returned even if broadcasting it fails',
 
             public function broadcast(array $channels, $event, array $payload = [])
             {
-                throw new \RuntimeException('Simulated broadcast server outage.');
+                throw new RuntimeException('Simulated broadcast server outage.');
             }
         };
     });
@@ -205,6 +236,7 @@ test('guests get a persistent guest token cookie and can list their sessions acr
     $first = $this->post(route('support.chat.api.initiate'), [
         'name' => 'Returning Guest',
         'email' => 'returning_guest@example.com',
+        'message' => 'First conversation, please help.',
     ]);
     $first->assertOk()->assertCookie('bidora_guest_token');
 
@@ -222,6 +254,7 @@ test('guests get a persistent guest token cookie and can list their sessions acr
         ->post(route('support.chat.api.initiate'), [
             'name' => 'Returning Guest',
             'email' => 'returning_guest@example.com',
+            'message' => 'Second, unrelated conversation.',
         ]);
     $second->assertOk();
 
@@ -262,14 +295,19 @@ test('a customer or guest cannot exceed the maximum number of open chat sessions
         'status' => ChatSessionStatus::WAITING,
     ]);
 
-    $response = $this->actingAs($customer)->post(route('support.chat.api.initiate'));
+    $response = $this->actingAs($customer)->post(route('support.chat.api.initiate'), [
+        'message' => 'Can I start a 4th conversation?',
+    ]);
 
     $response->assertStatus(422)->assertJsonStructure(['message']);
+    expect($response->json('message'))->toContain('already have 3 open conversations');
 
     // A closed session doesn't count towards the cap.
     ChatSession::where('customer_id', $customer->id)->first()->update(['status' => ChatSessionStatus::CLOSED]);
 
-    $this->actingAs($customer)->post(route('support.chat.api.initiate'))->assertOk();
+    $this->actingAs($customer)
+        ->post(route('support.chat.api.initiate'), ['message' => 'Now I should be able to.'])
+        ->assertOk();
 });
 
 test('submitting offline contact form creates a ticket', function () {

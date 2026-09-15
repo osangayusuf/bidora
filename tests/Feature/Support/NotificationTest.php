@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ChatSenderType;
 use App\Enums\ChatSessionStatus;
 use App\Enums\TicketCategory;
 use App\Enums\TicketPriority;
@@ -9,8 +10,8 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Notifications\NewChatSessionNotification;
 use App\Notifications\NewTicketCreatedNotification;
-use App\Notifications\TicketMessageReceivedNotification;
 use App\Notifications\TicketConvertedFromChatNotification;
+use App\Notifications\TicketMessageReceivedNotification;
 use App\Notifications\TicketReplyNotification;
 use App\Services\ChatService;
 use App\Services\TicketService;
@@ -92,7 +93,7 @@ test('new chat session sends notification to online agents and admins', function
 
     // Initiate chat
     $customer = User::factory()->create();
-    app(ChatService::class)->initiate($customer, []);
+    app(ChatService::class)->initiate($customer, [], 'Hello, I need help.');
 
     Notification::assertSentTo(
         [$agent],
@@ -237,10 +238,10 @@ test('converting a chat session to a ticket does not email either party about re
         'status' => ChatSessionStatus::ACTIVE,
     ]);
 
-    app(\App\Services\ChatService::class)->addMessage($session, $customer, 'Hi, I need help', \App\Enums\ChatSenderType::CUSTOMER);
-    app(\App\Services\ChatService::class)->addMessage($session, $agent, 'Sure, what is wrong?', \App\Enums\ChatSenderType::AGENT);
+    app(ChatService::class)->addMessage($session, $customer, 'Hi, I need help', ChatSenderType::CUSTOMER);
+    app(ChatService::class)->addMessage($session, $agent, 'Sure, what is wrong?', ChatSenderType::AGENT);
 
-    app(\App\Services\ChatService::class)->convertToTicket($session, [
+    app(ChatService::class)->convertToTicket($session, [
         'subject' => 'Chat converted',
         'category' => TicketCategory::GENERAL->value,
         'priority' => TicketPriority::NORMAL->value,
@@ -269,7 +270,7 @@ test('converting a chat session to a ticket emails the customer', function () {
         'status' => ChatSessionStatus::ACTIVE,
     ]);
 
-    $ticket = app(\App\Services\ChatService::class)->convertToTicket($session, [
+    $ticket = app(ChatService::class)->convertToTicket($session, [
         'subject' => 'Chat converted',
         'category' => TicketCategory::GENERAL->value,
         'priority' => TicketPriority::NORMAL->value,
@@ -295,7 +296,7 @@ test('converting a guest chat session to a ticket emails the newly provisioned c
         'status' => ChatSessionStatus::ACTIVE,
     ]);
 
-    app(\App\Services\ChatService::class)->convertToTicket($session, [
+    app(ChatService::class)->convertToTicket($session, [
         'subject' => 'Guest chat converted',
         'category' => TicketCategory::GENERAL->value,
         'priority' => TicketPriority::NORMAL->value,
