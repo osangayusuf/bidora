@@ -59,19 +59,23 @@ class CustomerChatController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|max:255',
+                'message' => 'required|string',
             ]);
             $guestData = [
                 'name' => $validated['name'],
                 'email' => $validated['email'],
             ];
         } else {
+            $validated = $request->validate([
+                'message' => 'required|string',
+            ]);
             $guestData = [];
         }
 
         $guestToken = $user ? null : $this->currentOrNewGuestToken($request);
 
         try {
-            $session = $this->chatService->initiate($user, $guestData, $guestToken);
+            $session = $this->chatService->initiate($user, $guestData, $validated['message'], $guestToken);
         } catch (ChatSessionLimitExceededException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
@@ -81,11 +85,14 @@ class CustomerChatController extends Controller
             session(['active_chat_session' => $session->uuid]);
         }
 
+        $session->load('messages');
+
         return response()->json([
             'uuid' => $session->uuid,
             'customer_name' => $session->customer_name,
             'customer_email' => $session->customer_email,
             'status' => $session->status->value,
+            'messages' => $session->messages,
         ]);
     }
 

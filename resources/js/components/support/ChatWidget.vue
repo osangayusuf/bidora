@@ -64,6 +64,7 @@ const messages = ref<ChatMessage[]>([]);
 const prechatForm = ref({
     name: '',
     email: '',
+    message: '',
 });
 
 const offlineForm = ref({
@@ -246,6 +247,7 @@ const startChat = async () => {
             body: JSON.stringify({
                 name: prechatForm.value.name,
                 email: prechatForm.value.email,
+                message: prechatForm.value.message,
             }),
         });
 
@@ -256,15 +258,18 @@ const startChat = async () => {
             agentName.value = null;
             connectEcho(data.uuid);
 
-            // Add a local welcome message
+            // Show the customer's own opening message (returned by the server, so it's
+            // never lost even if this tab closes right after) plus a local welcome note.
             messages.value = [
+                ...(data.messages || []),
                 {
-                    id: 0,
+                    id: -1,
                     sender_type: 'system',
                     body: 'Connecting to Bidora support. Please wait for an agent to claim the session...',
                     created_at: new Date().toISOString(),
                 },
             ];
+            prechatForm.value.message = '';
             view.value = 'chat';
             scrollToBottom();
 
@@ -677,6 +682,20 @@ onUnmounted(() => {
                                 placeholder="Enter email"
                                 class="rounded-lg border border-outline-variant bg-surface-container-low px-4 py-2.5 font-bold text-on-surface lowercase focus:ring-1 focus:ring-secondary focus:outline-none"
                             />
+                        </div>
+
+                        <div class="flex flex-col gap-1">
+                            <label
+                                class="text-[9px] font-bold tracking-wider text-on-surface-variant uppercase"
+                                >How can we help?</label
+                            >
+                            <textarea
+                                v-model="prechatForm.message"
+                                required
+                                rows="3"
+                                placeholder="Tell us what you need help with..."
+                                class="rounded-lg border border-outline-variant bg-surface-container-low p-4 text-[11px] font-medium text-on-surface focus:ring-1 focus:ring-secondary focus:outline-none"
+                            ></textarea>
                         </div>
 
                         <button

@@ -39,6 +39,12 @@ class ChatService
     /**
      * Initiate a new chat session for a customer or guest.
      *
+     * $message is the customer's opening message, required so that a session is never
+     * created (and never shown to agents) with nothing in it — previously a visitor could
+     * fill in the pre-chat name/email fields, hit "Start Live Chat", and abandon the widget
+     * before typing anything, leaving agents an empty session in the queue that looked
+     * exactly like a lost/blank message.
+     *
      * $guestToken is a long-lived, cookie-backed identifier for anonymous visitors (see
      * CustomerChatController), used in place of a customer_id to track ownership and enforce
      * the open-session cap for guests.
@@ -46,7 +52,7 @@ class ChatService
      * @throws ChatSessionLimitExceededException if the customer/guest already has
      *                                           MAX_OPEN_SESSIONS open sessions.
      */
-    public function initiate(?User $customer, array $guestData, ?string $guestToken = null): ChatSession
+    public function initiate(?User $customer, array $guestData, string $message, ?string $guestToken = null): ChatSession
     {
         $session = DB::transaction(function () use ($customer, $guestData, $guestToken): ChatSession {
             $openSessions = ChatSession::whereIn('status', [ChatSessionStatus::WAITING, ChatSessionStatus::ACTIVE])
@@ -69,6 +75,10 @@ class ChatService
                 'status' => ChatSessionStatus::WAITING,
             ]);
         });
+
+        // Record the customer's opening message before ever notifying/broadcasting the new
+        // session, so agents always have something to go on the moment they see it.
+        $this->addMessage($session, $customer, $message, ChatSenderType::CUSTOMER);
 
         // Broadcast and notify only once the session is safely committed, so a hiccup in
         // real-time delivery (the broadcast server being briefly unreachable, for example)

@@ -671,6 +671,17 @@ const getStatusDotClass = (status: string) => {
                         class="flex flex-1 flex-col gap-4 overflow-y-auto bg-[#fcfdfd] p-6"
                     >
                         <div
+                            v-if="messages.length === 0"
+                            class="flex flex-1 flex-col items-center justify-center gap-2 text-on-surface-variant/60"
+                        >
+                            <Inbox class="h-10 w-10" />
+                            <p
+                                class="text-[10px] font-bold tracking-wider uppercase"
+                            >
+                                No messages yet
+                            </p>
+                        </div>
+                        <div
                             v-for="msg in messages"
                             :key="msg.id"
                             :class="[
