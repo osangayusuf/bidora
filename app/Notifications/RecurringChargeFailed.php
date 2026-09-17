@@ -30,7 +30,7 @@ class RecurringChargeFailed extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject('We could not process your points auto top-up')
             ->greeting('Auto top-up charge failed')
-            ->line("Your ₦{$this->subscription->amount_naira} {$this->subscription->frequency->label()} auto top-up could not be charged.")
+            ->line("Your ₦{$this->subscription->amount_naira} {$this->subscription->cycleLabel()} auto top-up could not be charged.")
             ->line('Paystack will retry automatically. Please make sure your card has sufficient funds and is not expired.')
             ->action('Manage subscription', url('/wallet'));
     }
@@ -45,7 +45,7 @@ class RecurringChargeFailed extends Notification implements ShouldQueue
             'title' => "Auto top-up charge of ₦{$this->subscription->amount_naira} failed.",
             'url' => '/wallet',
             'subscription_id' => $this->subscription->id,
-            'message' => "We couldn't process your ₦{$this->subscription->amount_naira} {$this->subscription->frequency->label()} auto top-up. Please check your card.",
+            'message' => "We couldn't process your ₦{$this->subscription->amount_naira} {$this->subscription->cycleLabel()} auto top-up. Please check your card.",
         ];
     }
 }

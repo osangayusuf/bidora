@@ -89,4 +89,18 @@ return [
         'frequencies' => ['weekly', 'monthly'],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Subscription Packages
+    |--------------------------------------------------------------------------
+    | Fixed-tier packages (e.g. Solo, Jara, Awoof) with a set points bundle,
+    | price, and renewal cycle. Managed via the admin Subscription Packages
+    | screen. Charged locally against a saved card authorization rather than
+    | a native Paystack Subscription (see PackageSubscriptionService).
+    */
+    'packages' => [
+        'enabled' => env('SUBSCRIPTION_PACKAGES_ENABLED', false),
+        'max_charge_failures' => env('SUBSCRIPTION_PACKAGE_MAX_FAILURES', 3),
+    ],
+
 ];

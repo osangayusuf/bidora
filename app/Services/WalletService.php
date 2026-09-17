@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Enums\RewardSource;
+use App\Enums\SubscriptionStatus;
 use App\Enums\TransactionType;
 use App\Models\LaunchPromotion;
 use App\Models\PaystackTransaction;
+use App\Models\PointSubscription;
 use App\Models\PointTransaction;
 use App\Models\User;
 use App\Notifications\BonusPointsAwarded;
@@ -38,9 +40,22 @@ class WalletService
             return $existing;
         }
 
-        return DB::transaction(function () use ($user, $nairaAmount, $reference, $metadata, $paystackTransactionId, $pointSubscriptionId) {
-            $exchangeRate = (float) config('points.points_per_naira');
-            $pointsAmount = $nairaAmount * $exchangeRate;
+        $subscription = $pointSubscriptionId !== null
+            ? PointSubscription::with('subscriptionPackage')->find($pointSubscriptionId)
+            : null;
+        $package = $subscription?->subscriptionPackage;
+
+        return DB::transaction(function () use ($user, $nairaAmount, $reference, $metadata, $paystackTransactionId, $pointSubscriptionId, $subscription, $package) {
+            // A package subscription credits its fixed points_allocated
+            // (which may include a bonus over the standard rate) rather than
+            // the naira x points_per_naira conversion used everywhere else.
+            $pointsAmount = $package !== null
+                ? $package->points_allocated
+                : $nairaAmount * (float) config('points.points_per_naira');
+
+            $exchangeRate = $package !== null
+                ? ($nairaAmount > 0 ? $pointsAmount / $nairaAmount : 0)
+                : (float) config('points.points_per_naira');
 
             $user = User::where('id', $user->id)->lockForUpdate()->firstOrFail();
 
@@ -65,6 +80,21 @@ class WalletService
                 'status' => 'completed',
                 'metadata' => $metadata,
             ]);
+
+            if ($subscription !== null && $package !== null) {
+                // Package subscriptions never receive a `subscription.create`
+                // webhook (there is no native Paystack Subscription object),
+                // so this charge is what confirms them — first charge or
+                // renewal alike.
+                $subscription->update([
+                    'status' => $package->renewal_cycle->isRecurring()
+                        ? SubscriptionStatus::ACTIVE
+                        : SubscriptionStatus::COMPLETED,
+                    'next_charge_at' => $package->renewal_cycle->isRecurring()
+                        ? $package->renewal_cycle->nextChargeAt(now())
+                        : null,
+                ]);
+            }
 
             $user->notify(new PaymentConfirmed($transaction));
 

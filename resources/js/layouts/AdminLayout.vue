@@ -5,6 +5,7 @@ import {
     Users,
     Coins,
     CreditCard,
+    Layers,
     Repeat,
     Star,
     Settings,
@@ -30,6 +31,7 @@ import { index as pointSubscriptionsIndex } from '@/routes/admin/point-subscript
 import { index as pointTransactionsIndex } from '@/routes/admin/point-transactions';
 import { index as reviewsIndex } from '@/routes/admin/reviews';
 import { index as rewardsConfigIndex } from '@/routes/admin/rewards-config';
+import { index as subscriptionPackagesIndex } from '@/routes/admin/subscription-packages';
 import { index as usersIndex } from '@/routes/admin/users';
 import { index as winnersIndex } from '@/routes/admin/winners';
 
@@ -67,6 +69,11 @@ const navItems = [
         name: 'Subscriptions',
         href: pointSubscriptionsIndex.url(),
         icon: Repeat,
+    },
+    {
+        name: 'Subscription Packages',
+        href: subscriptionPackagesIndex.url(),
+        icon: Layers,
     },
     { name: 'Reviews', href: reviewsIndex.url(), icon: Star },
     { name: 'Rewards Config', href: rewardsConfigIndex.url(), icon: Settings },

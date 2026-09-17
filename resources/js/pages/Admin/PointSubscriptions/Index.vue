@@ -19,17 +19,23 @@ type PointSubscription = {
     user_id: number;
     subscription_code: string | null;
     amount_naira: string | number;
-    frequency: 'weekly' | 'monthly';
+    frequency: 'weekly' | 'monthly' | null;
     status: SubscriptionStatus;
     authorization_last4: string | null;
     authorization_brand: string | null;
     next_payment_date: string | null;
+    next_charge_at: string | null;
     last_charged_at: string | null;
     failure_count: number;
     created_at: string;
     user: { name: string; email: string; phone: string } | null;
     plan: { amount_kobo: number; interval: string } | null;
+    subscriptionPackage: { name: string; renewal_cycle: string } | null;
 };
+
+function cycleLabel(sub: PointSubscription): string {
+    return sub.frequency ?? sub.subscriptionPackage?.renewal_cycle ?? '—';
+}
 
 const props = defineProps<{
     subscriptions: {
@@ -65,21 +71,29 @@ const clearSearch = () => {
 const cancelSubscription = (subscription: PointSubscription) => {
     if (
         !confirm(
-            `Cancel ${subscription.user?.name ?? 'this user'}'s ₦${Number(subscription.amount_naira).toLocaleString()} ${subscription.frequency} auto top-up?`,
+            `Cancel ${subscription.user?.name ?? 'this user'}'s ₦${Number(subscription.amount_naira).toLocaleString()} ${cycleLabel(subscription)} auto top-up?`,
         )
     ) {
         return;
     }
 
-    router.post(pointSubscriptions.cancel.url(subscription.id), {}, {
-        preserveScroll: true,
-    });
+    router.post(
+        pointSubscriptions.cancel.url(subscription.id),
+        {},
+        {
+            preserveScroll: true,
+        },
+    );
 };
 
 const resyncSubscription = (subscription: PointSubscription) => {
-    router.post(pointSubscriptions.resync.url(subscription.id), {}, {
-        preserveScroll: true,
-    });
+    router.post(
+        pointSubscriptions.resync.url(subscription.id),
+        {},
+        {
+            preserveScroll: true,
+        },
+    );
 };
 
 function statusBadgeClass(status: SubscriptionStatus): string {
@@ -215,6 +229,14 @@ function formatDate(value: string | null): string {
                                         class="text-on-surface-variant italic"
                                         >Unknown user</span
                                     >
+                                    <span
+                                        v-if="sub.subscriptionPackage"
+                                        class="mt-0.5 block text-[9px] font-bold text-secondary uppercase"
+                                        >{{
+                                            sub.subscriptionPackage.name
+                                        }}
+                                        package</span
+                                    >
                                 </td>
                                 <td
                                     class="px-6 py-4 text-right font-sans text-xs font-bold text-primary"
@@ -226,7 +248,7 @@ function formatDate(value: string | null): string {
                                     }}
                                     <span
                                         class="block text-[9px] font-normal text-on-surface-variant uppercase"
-                                        >{{ sub.frequency }}</span
+                                        >{{ cycleLabel(sub) }}</span
                                     >
                                 </td>
                                 <td class="px-6 py-4">
@@ -236,7 +258,9 @@ function formatDate(value: string | null): string {
                                         >{{ sub.authorization_brand }} ····
                                         {{ sub.authorization_last4 }}</span
                                     >
-                                    <span v-else class="text-on-surface-variant italic"
+                                    <span
+                                        v-else
+                                        class="text-on-surface-variant italic"
                                         >Not yet confirmed</span
                                     >
                                     <span
@@ -258,8 +282,7 @@ function formatDate(value: string | null): string {
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex flex-col text-[10px]">
-                                        <span
-                                            class="font-bold text-on-surface"
+                                        <span class="font-bold text-on-surface"
                                             >NEXT:
                                             {{
                                                 formatDate(

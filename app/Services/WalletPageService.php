@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\PaystackPlan;
 use App\Models\PointSubscription;
 use App\Models\PointTransaction;
+use App\Models\SubscriptionPackage;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -25,6 +26,7 @@ class WalletPageService
             'paystack_public_key' => config('services.paystack.public'),
             'one_off_deposits_enabled' => (bool) config('points.one_off_deposits_enabled'),
             'recurring_enabled' => (bool) config('points.recurring.enabled'),
+            'packages_enabled' => (bool) config('points.packages.enabled'),
         ];
     }
 
@@ -72,8 +74,22 @@ class WalletPageService
     {
         return PointSubscription::query()
             ->where('user_id', $user->id)
-            ->with('plan')
+            ->with(['plan', 'subscriptionPackage'])
             ->latest()
+            ->get();
+    }
+
+    /**
+     * The active fixed-tier packages users can subscribe to.
+     *
+     * @return Collection<int, SubscriptionPackage>
+     */
+    public function packages(): Collection
+    {
+        return SubscriptionPackage::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
             ->get();
     }
 }

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { onMounted, watch } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import SettingsPanel from '@/components/settings/SettingsPanel.vue';
 import SettingsShell from '@/components/settings/SettingsShell.vue';
 import WalletBalanceCards from '@/components/wallet/WalletBalanceCards.vue';
 import WalletClaimBonus from '@/components/wallet/WalletClaimBonus.vue';
 import WalletDepositForm from '@/components/wallet/WalletDepositForm.vue';
+import WalletPackagesSection from '@/components/wallet/WalletPackagesSection.vue';
 import WalletRecurringSection from '@/components/wallet/WalletRecurringSection.vue';
 import WalletTransactionsSection from '@/components/wallet/WalletTransactionsSection.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
@@ -14,6 +15,7 @@ import { wallet as walletRoute } from '@/routes/index';
 import type {
     PaystackPlanListing,
     PointSubscriptionListing,
+    SubscriptionPackageListing,
     WalletBalances,
     WalletConfig,
     WalletTransactionsPaginator,
@@ -27,9 +29,17 @@ const props = defineProps<{
     transactions: WalletTransactionsPaginator;
     availablePlans: PaystackPlanListing[];
     subscriptions: PointSubscriptionListing[];
+    packages: SubscriptionPackageListing[];
     paymentStatus?: string | null;
     paymentReference?: string | null;
 }>();
+
+const planSubscriptions = computed(() =>
+    props.subscriptions.filter((s) => s.kind === 'plan'),
+);
+const packageSubscriptions = computed(() =>
+    props.subscriptions.filter((s) => s.kind === 'package'),
+);
 
 function showPaymentToast(): void {
     if (props.paymentStatus === 'success') {
@@ -75,10 +85,15 @@ watch(
                     :balances="balances"
                     :wallet-config="walletConfig"
                 />
+                <WalletPackagesSection
+                    v-if="walletConfig.packages_enabled"
+                    :packages="packages"
+                    :subscriptions="packageSubscriptions"
+                />
                 <WalletRecurringSection
                     v-if="walletConfig.recurring_enabled"
                     :available-plans="availablePlans"
-                    :subscriptions="subscriptions"
+                    :subscriptions="planSubscriptions"
                 />
                 <WalletDepositForm
                     v-if="walletConfig.one_off_deposits_enabled"

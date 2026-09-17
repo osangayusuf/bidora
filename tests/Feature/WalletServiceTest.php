@@ -1,6 +1,10 @@
 <?php
 
+use App\Enums\PackageRenewalCycle;
+use App\Enums\SubscriptionStatus;
 use App\Models\LaunchPromotion;
+use App\Models\PointSubscription;
+use App\Models\SubscriptionPackage;
 use App\Models\User;
 use App\Services\WalletService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,6 +26,66 @@ it('can process deposit and convert naira to points', function () {
         ->and($transaction->amount)->toEqual(100000) // 1000 * 100
         ->and($transaction->provider_reference)->toBe('ref_123')
         ->and($transaction->status->value)->toBe('completed');
+});
+
+it('credits a package subscription its fixed points_allocated, not the naira rate', function () {
+    config(['points.points_per_naira' => 10]);
+
+    $user = User::factory()->create(['points_balance' => 0]);
+    $package = SubscriptionPackage::create([
+        'name' => 'Awoof',
+        'slug' => 'awoof',
+        'renewal_cycle' => PackageRenewalCycle::WEEKLY,
+        'points_allocated' => 6000,
+        'price_naira' => 500,
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+    $subscription = PointSubscription::create([
+        'user_id' => $user->id,
+        'subscription_package_id' => $package->id,
+        'amount_naira' => 500,
+        'status' => SubscriptionStatus::PENDING,
+        'authorization_code' => 'AUTH_pkg',
+    ]);
+
+    $service = new WalletService;
+    $transaction = $service->processDeposit($user, 500, 'ref_pkg_first', [], null, $subscription->id);
+
+    // Standard rate would give 500 * 10 = 5000 — the package's bonus rate wins.
+    expect($transaction->amount)->toEqual(6000);
+    expect($user->fresh()->points_balance)->toEqual(6000);
+
+    $subscription->refresh();
+    expect($subscription->status)->toBe(SubscriptionStatus::ACTIVE)
+        ->and($subscription->next_charge_at)->not->toBeNull();
+});
+
+it('marks a one-off package subscription completed with no next charge', function () {
+    $user = User::factory()->create(['points_balance' => 0]);
+    $package = SubscriptionPackage::create([
+        'name' => 'Solo',
+        'slug' => 'solo',
+        'renewal_cycle' => PackageRenewalCycle::ONE_OFF,
+        'points_allocated' => 5000,
+        'price_naira' => 500,
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+    $subscription = PointSubscription::create([
+        'user_id' => $user->id,
+        'subscription_package_id' => $package->id,
+        'amount_naira' => 500,
+        'status' => SubscriptionStatus::PENDING,
+        'authorization_code' => 'AUTH_solo',
+    ]);
+
+    (new WalletService)->processDeposit($user, 500, 'ref_solo', [], null, $subscription->id);
+
+    $subscription->refresh();
+    expect($subscription->status)->toBe(SubscriptionStatus::COMPLETED)
+        ->and($subscription->next_charge_at)->toBeNull()
+        ->and($subscription->isCancellable())->toBeFalse();
 });
 
 it('can award bonus points', function () {
