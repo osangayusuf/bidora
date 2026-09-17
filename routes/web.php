@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\PointSubscriptionController;
 use App\Http\Controllers\Admin\PointTransactionController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\RewardsConfigController;
+use App\Http\Controllers\Admin\SubscriptionPackageController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\WinnerController as AdminWinnerController;
 use App\Http\Controllers\AuctionController;
@@ -35,6 +36,7 @@ use App\Http\Controllers\TaskCenterController;
 use App\Http\Controllers\TermsController;
 use App\Http\Controllers\TrendingController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\WalletPackageSubscriptionController;
 use App\Http\Controllers\WalletSubscriptionController;
 use App\Http\Controllers\WinnersController;
 use App\Http\Middleware\EnsureTermsAccepted;
@@ -76,6 +78,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('wallet/subscriptions', [WalletSubscriptionController::class, 'store'])->name('wallet.subscriptions.store');
     Route::delete('wallet/subscriptions/{subscription}', [WalletSubscriptionController::class, 'destroy'])->name('wallet.subscriptions.destroy');
     Route::get('wallet/subscriptions/{subscription}/manage-card', [WalletSubscriptionController::class, 'manageCard'])->name('wallet.subscriptions.manage-card');
+    Route::post('wallet/packages/subscribe', [WalletPackageSubscriptionController::class, 'store'])->name('wallet.packages.subscribe');
     Route::get('tasks', [TaskCenterController::class, 'index'])->name('tasks');
     Route::post('checkin', [CheckinController::class, 'store'])->name('checkin');
     Route::get('profile', [ProfileController::class, 'index'])->name('profile');
@@ -138,6 +141,13 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::get('point-subscriptions', [PointSubscriptionController::class, 'index'])->name('point-subscriptions.index');
         Route::post('point-subscriptions/{subscription}/cancel', [PointSubscriptionController::class, 'cancel'])->name('point-subscriptions.cancel');
         Route::post('point-subscriptions/{subscription}/resync', [PointSubscriptionController::class, 'resync'])->name('point-subscriptions.resync');
+
+        // Subscription Packages (fixed-tier catalog)
+        Route::get('subscription-packages', [SubscriptionPackageController::class, 'index'])->name('subscription-packages.index');
+        Route::post('subscription-packages', [SubscriptionPackageController::class, 'store'])->name('subscription-packages.store');
+        Route::patch('subscription-packages/{package}', [SubscriptionPackageController::class, 'update'])->name('subscription-packages.update');
+        Route::post('subscription-packages/{package}/toggle-active', [SubscriptionPackageController::class, 'toggleActive'])->name('subscription-packages.toggle-active');
+        Route::delete('subscription-packages/{package}', [SubscriptionPackageController::class, 'destroy'])->name('subscription-packages.destroy');
 
         // Reviews Moderation
         Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');

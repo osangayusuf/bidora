@@ -14,6 +14,7 @@ export type WalletConfig = {
     paystack_public_key: string;
     one_off_deposits_enabled: boolean;
     recurring_enabled: boolean;
+    packages_enabled: boolean;
 };
 
 export type SubscriptionFrequency = 'weekly' | 'monthly';
@@ -33,17 +34,39 @@ export type SubscriptionStatus =
     | 'completed'
     | 'cancelled';
 
+export type PackageRenewalCycle =
+    | 'one_off'
+    | 'daily'
+    | 'weekly'
+    | 'bi_weekly'
+    | 'monthly';
+
+export type SubscriptionPackageListing = {
+    id: number;
+    name: string;
+    slug: string;
+    renewal_cycle: PackageRenewalCycle;
+    renewal_cycle_label: string;
+    points_allocated: number;
+    price_naira: number;
+    is_active: boolean;
+    sort_order: number;
+};
+
 export type PointSubscriptionListing = {
     id: number;
+    kind: 'plan' | 'package';
     amount_naira: number;
-    frequency: SubscriptionFrequency;
+    frequency: SubscriptionFrequency | null;
     frequency_label: string;
+    package_name: string | null;
     status: SubscriptionStatus;
     status_label: string;
     is_cancellable: boolean;
     authorization_last4: string | null;
     authorization_brand: string | null;
     next_payment_date: string | null;
+    next_charge_at: string | null;
     last_charged_at: string | null;
     failure_count: number;
     created_at: string;

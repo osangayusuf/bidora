@@ -8,6 +8,7 @@ use App\Http\Requests\Wallet\DepositRequest;
 use App\Http\Resources\PaystackPlanResource;
 use App\Http\Resources\PointSubscriptionResource;
 use App\Http\Resources\PointTransactionResource;
+use App\Http\Resources\SubscriptionPackageResource;
 use App\Services\ActivityService;
 use App\Services\PaystackService;
 use App\Services\RecurringPaymentService;
@@ -48,6 +49,9 @@ class WalletController extends Controller
                 ->values(),
             'subscriptions' => $this->walletPageService->subscriptions($user)
                 ->map(fn ($subscription) => (new PointSubscriptionResource($subscription))->resolve())
+                ->values(),
+            'packages' => $this->walletPageService->packages()
+                ->map(fn ($package) => (new SubscriptionPackageResource($package))->resolve())
                 ->values(),
             'paymentStatus' => $request->query('payment'),
             'paymentReference' => $request->query('reference'),

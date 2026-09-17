@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'user_id',
     'paystack_plan_id',
+    'subscription_package_id',
     'pending_reference',
     'subscription_code',
     'email_token',
@@ -23,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'frequency',
     'status',
     'next_payment_date',
+    'next_charge_at',
     'last_charged_at',
     'failure_count',
     'metadata',
@@ -36,6 +38,7 @@ class PointSubscription extends Model
             'status' => SubscriptionStatus::class,
             'amount_naira' => 'decimal:2',
             'next_payment_date' => 'datetime',
+            'next_charge_at' => 'datetime',
             'last_charged_at' => 'datetime',
             'failure_count' => 'integer',
             'metadata' => 'array',
@@ -52,6 +55,11 @@ class PointSubscription extends Model
         return $this->belongsTo(PaystackPlan::class, 'paystack_plan_id');
     }
 
+    public function subscriptionPackage(): BelongsTo
+    {
+        return $this->belongsTo(SubscriptionPackage::class, 'subscription_package_id');
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(PointTransaction::class);
@@ -65,5 +73,19 @@ class PointSubscription extends Model
             SubscriptionStatus::ATTENTION,
             SubscriptionStatus::NON_RENEWING,
         ], true);
+    }
+
+    public function isPackageBased(): bool
+    {
+        return $this->subscription_package_id !== null;
+    }
+
+    /**
+     * The renewal cadence label, regardless of whether this is a
+     * Paystack-Plan-backed subscription or a fixed package.
+     */
+    public function cycleLabel(): string
+    {
+        return $this->frequency?->label() ?? $this->subscriptionPackage?->renewal_cycle->label() ?? '';
     }
 }

@@ -28,7 +28,7 @@ class PointSubscriptionController extends Controller
             : null;
 
         $query = PointSubscription::query()
-            ->with(['user', 'plan'])
+            ->with(['user', 'plan', 'subscriptionPackage'])
             ->orderBy('id', 'desc');
 
         if ($search) {

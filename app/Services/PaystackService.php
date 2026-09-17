@@ -209,6 +209,51 @@ class PaystackService
     }
 
     /**
+     * Charge a previously-saved card authorization directly (no hosted
+     * checkout). Used to renew package subscriptions on our own schedule
+     * instead of relying on a native Paystack Subscription. Paystack
+     * responds 200 with `data.status` of `success` or `failed` even for a
+     * declined card, so callers must check that field, not just the HTTP
+     * status.
+     *
+     * @param  array<string, mixed>  $metadata
+     */
+    public function chargeAuthorization(
+        string $authorizationCode,
+        string $email,
+        int $amountKobo,
+        array $metadata = [],
+        ?string $reference = null,
+    ): ?array {
+        $secret = config('services.paystack.secret');
+
+        $payload = [
+            'authorization_code' => $authorizationCode,
+            'email' => $email,
+            'amount' => $amountKobo,
+            'metadata' => array_merge(['app' => 'bidora'], $metadata),
+        ];
+
+        if ($reference !== null) {
+            $payload['reference'] = $reference;
+        }
+
+        $response = Http::withToken($secret)
+            ->post('https://api.paystack.co/transaction/charge_authorization', $payload);
+
+        if ($response->successful()) {
+            return $response->json('data');
+        }
+
+        Log::error('Paystack charge authorization failed', [
+            'status' => $response->status(),
+            'body' => $response->body(),
+        ]);
+
+        return null;
+    }
+
+    /**
      * Verify a transaction manually via Paystack API.
      */
     public function verifyTransaction(string $reference): ?array
