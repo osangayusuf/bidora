@@ -78,14 +78,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Recurring Point Subscriptions
+    | Recurring Point Subscriptions (legacy)
     |--------------------------------------------------------------------------
-    | Paystack Plans/Subscriptions-backed recurring top-ups. Each enabled
-    | frequency is combined with every amount in `deposit_presets` to form
-    | the plan matrix seeded by `php artisan paystack:sync-plans`.
+    | Paystack Plans/Subscriptions-backed recurring top-ups. Superseded by the
+    | fixed-tier Subscription Packages below — kept fully functional (routes,
+    | controller, services, `php artisan paystack:sync-plans`) so it can be
+    | re-enabled without a code change, but hidden from the Wallet page while
+    | the platform is packages-only. Does not affect admin screens.
     */
     'recurring' => [
-        'enabled' => env('RECURRING_DEPOSITS_ENABLED', true),
+        'enabled' => env('RECURRING_DEPOSITS_ENABLED', false),
         'frequencies' => ['weekly', 'monthly'],
     ],
 
@@ -96,10 +98,11 @@ return [
     | Fixed-tier packages (e.g. Solo, Jara, Awoof) with a set points bundle,
     | price, and renewal cycle. Managed via the admin Subscription Packages
     | screen. Charged locally against a saved card authorization rather than
-    | a native Paystack Subscription (see PackageSubscriptionService).
+    | a native Paystack Subscription (see PackageSubscriptionService). This is
+    | the platform's primary points-purchase flow.
     */
     'packages' => [
-        'enabled' => env('SUBSCRIPTION_PACKAGES_ENABLED', false),
+        'enabled' => env('SUBSCRIPTION_PACKAGES_ENABLED', true),
         'max_charge_failures' => env('SUBSCRIPTION_PACKAGE_MAX_FAILURES', 3),
     ],
 
