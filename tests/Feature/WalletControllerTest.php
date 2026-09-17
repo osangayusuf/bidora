@@ -111,7 +111,8 @@ test('authenticated users can view wallet page', function () {
             ->where('balances.points_balance', 500)
             ->where('balances.bonus_points', 100)
             ->where('walletConfig.one_off_deposits_enabled', false)
-            ->where('walletConfig.recurring_enabled', true)
+            ->where('walletConfig.recurring_enabled', false)
+            ->where('walletConfig.packages_enabled', true)
         );
 });
 
