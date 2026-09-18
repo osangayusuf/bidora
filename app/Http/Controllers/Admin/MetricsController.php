@@ -18,6 +18,15 @@ use Inertia\Response;
 class MetricsController extends Controller
 {
     /**
+     * Timezone the business actually operates in. Data is stored in UTC
+     * (app.timezone), but "today"/"yesterday"/month boundaries for reporting
+     * must be computed in this timezone and then converted to UTC, or a
+     * transaction paid in the last hour of the WAT day gets bucketed into the
+     * wrong UTC day.
+     */
+    private const BUSINESS_TIMEZONE = 'Africa/Lagos';
+
+    /**
      * Display general platform metrics and point purchase analytics.
      */
     public function index(Request $request): Response
@@ -31,18 +40,18 @@ class MetricsController extends Controller
         $filterMode = 'month';
 
         if ($startDateInput && $endDateInput) {
-            $startDate = Carbon::parse($startDateInput)->startOfDay();
-            $endDate = Carbon::parse($endDateInput)->endOfDay();
+            $startDate = Carbon::parse($startDateInput, self::BUSINESS_TIMEZONE)->startOfDay()->utc();
+            $endDate = Carbon::parse($endDateInput, self::BUSINESS_TIMEZONE)->endOfDay()->utc();
             $filterMode = 'custom';
         } elseif ($month) {
-            $startDate = Carbon::parse($month.'-01')->startOfMonth()->startOfDay();
-            $endDate = Carbon::parse($month.'-01')->endOfMonth()->endOfDay();
+            $startDate = Carbon::parse($month.'-01', self::BUSINESS_TIMEZONE)->startOfMonth()->startOfDay()->utc();
+            $endDate = Carbon::parse($month.'-01', self::BUSINESS_TIMEZONE)->endOfMonth()->endOfDay()->utc();
             $filterMode = 'month';
         } else {
             // Default to current month
-            $startDate = Carbon::now()->startOfMonth()->startOfDay();
-            $endDate = Carbon::now()->endOfMonth()->endOfDay();
-            $month = Carbon::now()->format('Y-m');
+            $startDate = Carbon::now(self::BUSINESS_TIMEZONE)->startOfMonth()->startOfDay()->utc();
+            $endDate = Carbon::now(self::BUSINESS_TIMEZONE)->endOfMonth()->endOfDay()->utc();
+            $month = Carbon::now(self::BUSINESS_TIMEZONE)->format('Y-m');
             $filterMode = 'month';
         }
 
@@ -86,20 +95,22 @@ class MetricsController extends Controller
             ? round($completedAuctionsBidsSum / $completedAuctionsCount, 1)
             : 0;
 
-        // Daily points purchased breakdown for visual dashboard representation
+        // Daily points purchased breakdown for visual dashboard representation.
+        // Grouped in PHP rather than SQL DATE(created_at) so each row lands in
+        // its business-timezone calendar day instead of its UTC storage day.
         $dailyPurchases = PointTransaction::query()
             ->where('type', TransactionType::DEPOSIT)
             ->where('status', TransactionStatus::COMPLETED)
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('DATE(created_at) as date, SUM(amount) as points, SUM(naira_amount) as naira')
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get()
-            ->map(fn ($item) => [
-                'date' => Carbon::parse($item->date)->format('M d'),
-                'points' => (int) $item->points,
-                'naira' => (float) $item->naira,
-            ]);
+            ->get(['created_at', 'amount', 'naira_amount'])
+            ->groupBy(fn ($item) => $item->created_at->copy()->setTimezone(self::BUSINESS_TIMEZONE)->toDateString())
+            ->sortKeys()
+            ->map(fn ($group, $date) => [
+                'date' => Carbon::parse($date)->format('M d'),
+                'points' => (int) $group->sum('amount'),
+                'naira' => (float) $group->sum('naira_amount'),
+            ])
+            ->values();
 
         // Top points purchasers in the selected period
         $topPurchasers = PointTransaction::query()

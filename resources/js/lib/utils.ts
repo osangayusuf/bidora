@@ -55,6 +55,27 @@ export function formatDate(dateStr: string): string {
     return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
+/** Business operating timezone — matches MetricsController::BUSINESS_TIMEZONE. */
+export const BUSINESS_TIMEZONE = 'Africa/Lagos';
+
+/**
+ * Formats a timestamp in the business's own timezone rather than the
+ * viewing device's local timezone, so admins in different timezones (or a
+ * server clock in UTC) all see the same "day" for the same transaction.
+ */
+export function formatDateTime(dateStr: string): string {
+    return new Date(dateStr).toLocaleString('en-NG', {
+        timeZone: BUSINESS_TIMEZONE,
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+    });
+}
+
 export function getRemainingTime(expiresAt: string | null | undefined): string {
     if (!expiresAt) {
         return '';
