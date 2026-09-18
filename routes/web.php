@@ -121,6 +121,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])
 
         // Users Management
         Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::post('users/bulk-disable', [UserController::class, 'bulkDisable'])->name('users.bulk-disable');
         Route::post('users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
         Route::post('users/{user}/role', [UserController::class, 'updateRole'])->name('users.role');
 

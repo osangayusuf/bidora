@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm, router, Link } from '@inertiajs/vue3';
+import { reactive } from 'vue';
 import {
     ShieldAlert,
     Search,
@@ -11,10 +12,14 @@ import {
     CheckCircle,
     XCircle,
     UserMinus,
+    ShieldOff,
 } from 'lucide-vue-next';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { index as activityLogIndex } from '@/routes/admin/activity-log';
-import { toggleActive as usersToggleActive } from '@/routes/admin/users';
+import {
+    toggleActive as usersToggleActive,
+    bulkDisable as usersBulkDisable,
+} from '@/routes/admin/users';
 
 type User = {
     id: number;
@@ -97,6 +102,60 @@ const toggleUserActive = (user: User) => {
             },
         );
     }
+};
+
+// Per-IP-group selection state for bulk disable, keyed by IP address.
+const selectedByIp = reactive<Record<string, number[]>>({});
+
+const selectedForIp = (ip: string) => selectedByIp[ip] ?? [];
+
+const isSelected = (ip: string, userId: number) =>
+    selectedForIp(ip).includes(userId);
+
+const toggleSelection = (ip: string, userId: number) => {
+    const current = selectedByIp[ip] ?? [];
+    selectedByIp[ip] = current.includes(userId)
+        ? current.filter((id) => id !== userId)
+        : [...current, userId];
+};
+
+const bulkDisableUsers = (userIds: number[], ip?: string) => {
+    if (userIds.length === 0) {
+        return;
+    }
+
+    const label =
+        userIds.length === 1 ? '1 account' : `${userIds.length} accounts`;
+
+    if (
+        confirm(
+            `Are you sure you want to disable ${label}${ip ? ` from IP ${ip}` : ''}? This cannot be undone from here.`,
+        )
+    ) {
+        router.post(
+            usersBulkDisable.url(),
+            { user_ids: userIds },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    if (ip) {
+                        selectedByIp[ip] = [];
+                    }
+                },
+            },
+        );
+    }
+};
+
+const disableSelectedForIp = (ip: string) => {
+    bulkDisableUsers(selectedForIp(ip), ip);
+};
+
+const disableAllForIp = (alert: SharedIpAlert) => {
+    bulkDisableUsers(
+        alert.users.filter((u) => u.is_active).map((u) => u.id),
+        alert.ip,
+    );
 };
 
 const formatMetadata = (metadata: any) => {
@@ -224,7 +283,7 @@ const getBadgeStyle = (type: string) => {
                                 class="rounded-lg border border-outline-variant bg-surface-container-low/40 p-3.5"
                             >
                                 <div
-                                    class="mb-2 flex items-center justify-between"
+                                    class="mb-2 flex items-center justify-between gap-2"
                                 >
                                     <span
                                         class="font-mono text-xs font-bold text-primary select-all"
@@ -235,21 +294,70 @@ const getBadgeStyle = (type: string) => {
                                         >{{ alert.count }} accounts</span
                                     >
                                 </div>
+                                <div
+                                    class="mb-2 flex items-center justify-end gap-2"
+                                >
+                                    <button
+                                        v-if="selectedForIp(alert.ip).length > 0"
+                                        @click="disableSelectedForIp(alert.ip)"
+                                        class="flex items-center gap-1 rounded border border-error/20 bg-error-container/10 px-2 py-1 text-[9px] font-black text-error uppercase transition-colors hover:bg-error-container/25"
+                                    >
+                                        <Lock class="h-3 w-3" />
+                                        <span
+                                            >Disable Selected ({{
+                                                selectedForIp(alert.ip).length
+                                            }})</span
+                                        >
+                                    </button>
+                                    <button
+                                        v-if="
+                                            alert.users.some(
+                                                (u) => u.is_active,
+                                            )
+                                        "
+                                        @click="disableAllForIp(alert)"
+                                        class="flex items-center gap-1 rounded bg-error px-2 py-1 text-[9px] font-black text-on-error uppercase transition-colors hover:bg-error/90"
+                                    >
+                                        <ShieldOff class="h-3 w-3" />
+                                        <span>Disable All</span>
+                                    </button>
+                                </div>
                                 <div class="space-y-2">
                                     <div
                                         v-for="user in alert.users"
                                         :key="user.id"
                                         class="flex items-center justify-between rounded border border-outline-variant/40 bg-surface-container-lowest p-2"
                                     >
-                                        <div class="min-w-0 flex-1">
-                                            <span
-                                                class="block truncate font-bold text-primary"
-                                                >{{ user.name }}</span
-                                            >
-                                            <span
-                                                class="mt-0.5 block truncate font-mono text-[9px] text-on-surface-variant"
-                                                >{{ user.email }}</span
-                                            >
+                                        <div
+                                            class="flex min-w-0 flex-1 items-center gap-2"
+                                        >
+                                            <input
+                                                v-if="user.is_active"
+                                                type="checkbox"
+                                                :checked="
+                                                    isSelected(
+                                                        alert.ip,
+                                                        user.id,
+                                                    )
+                                                "
+                                                @change="
+                                                    toggleSelection(
+                                                        alert.ip,
+                                                        user.id,
+                                                    )
+                                                "
+                                                class="h-3.5 w-3.5 shrink-0 rounded border-outline-variant text-error focus:ring-error"
+                                            />
+                                            <div class="min-w-0">
+                                                <span
+                                                    class="block truncate font-bold text-primary"
+                                                    >{{ user.name }}</span
+                                                >
+                                                <span
+                                                    class="mt-0.5 block truncate font-mono text-[9px] text-on-surface-variant"
+                                                    >{{ user.email }}</span
+                                                >
+                                            </div>
                                         </div>
                                         <div class="pl-2">
                                             <button
