@@ -88,6 +88,46 @@ class UserController extends Controller
         );
     }
 
+    public function bulkDisable(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'integer|distinct|exists:users,id',
+        ]);
+
+        $userIds = collect($validated['user_ids'])
+            ->reject(fn (int $id) => $id === $request->user()->id)
+            ->values();
+
+        $users = User::query()
+            ->whereIn('id', $userIds)
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($users as $user) {
+            $user->is_active = false;
+            $user->save();
+
+            $this->activityService->log(
+                type: ActivityType::USER_STATUS_TOGGLED,
+                user: $request->user(),
+                subject: $user,
+                metadata: [
+                    'target_user_id' => $user->id,
+                    'target_user_email' => $user->email,
+                    'status' => 'inactive',
+                    'bulk' => true,
+                ]
+            );
+        }
+
+        return back()->with('success', trans_choice(
+            ':count account disabled successfully.|:count accounts disabled successfully.',
+            $users->count(),
+            ['count' => $users->count()]
+        ));
+    }
+
     public function updateRole(User $user, Request $request): RedirectResponse
     {
         $request->validate([
