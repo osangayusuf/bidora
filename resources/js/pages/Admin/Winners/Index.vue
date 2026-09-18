@@ -426,7 +426,7 @@ const formatDate = (isoString: string) => {
                                     </div>
                                     <span
                                         v-else
-                                        class="italic text-on-surface-variant"
+                                        class="text-on-surface-variant italic"
                                         >No Winner Assigned</span
                                     >
                                 </td>
@@ -469,7 +469,9 @@ const formatDate = (isoString: string) => {
                                             <div
                                                 class="flex items-center gap-0.5 text-amber-500"
                                             >
-                                                <Star class="h-3 w-3 fill-current" />
+                                                <Star
+                                                    class="h-3 w-3 fill-current"
+                                                />
                                                 <span class="font-bold">{{
                                                     item.review.rating
                                                 }}</span>
@@ -579,8 +581,9 @@ const formatDate = (isoString: string) => {
                         class="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase"
                     >
                         Showing {{ winners.from || 0 }} to
-                        {{ winners.to || 0 }} of {{ winners.total }} winners (Page
-                        {{ winners.current_page }} of {{ winners.last_page }})
+                        {{ winners.to || 0 }} of {{ winners.total }} winners
+                        (Page {{ winners.current_page }} of
+                        {{ winners.last_page }})
                     </p>
                     <div class="flex gap-1">
                         <Link
@@ -673,9 +676,7 @@ const formatDate = (isoString: string) => {
                             </p>
                             <p class="text-[10px] text-on-surface-variant">
                                 Retail:
-                                {{
-                                    formatCurrency(selectedReviewWinner.price)
-                                }}
+                                {{ formatCurrency(selectedReviewWinner.price) }}
                             </p>
                         </div>
                     </div>
@@ -700,11 +701,10 @@ const formatDate = (isoString: string) => {
                                             : 'opacity-30',
                                     ]"
                                 />
-                                <span class="ml-1 text-xs font-bold text-primary"
-                                    >{{
-                                        selectedReviewWinner.review.rating
-                                    }}
-                                    / 5</span
+                                <span
+                                    class="ml-1 text-xs font-bold text-primary"
+                                    >{{ selectedReviewWinner.review.rating }} /
+                                    5</span
                                 >
                             </div>
 
@@ -750,8 +750,9 @@ const formatDate = (isoString: string) => {
                             </p>
                             <div class="grid grid-cols-3 gap-2">
                                 <button
-                                    v-for="(photo, index) in selectedReviewWinner
-                                        .review.photos"
+                                    v-for="(
+                                        photo, index
+                                    ) in selectedReviewWinner.review.photos"
                                     :key="index"
                                     type="button"
                                     @click="activeExpandedPhoto = photo"

@@ -290,7 +290,9 @@ function submitBid(): void {
                             </button>
                         </div>
                         <p class="mb-4 flex items-baseline gap-2">
-                            <span class="text-2xl font-black whitespace-nowrap text-forest">
+                            <span
+                                class="text-2xl font-black whitespace-nowrap text-forest"
+                            >
                                 {{ formatPrice(auction.price) }}
                             </span>
                             <span
