@@ -298,7 +298,9 @@ const getBadgeStyle = (type: string) => {
                                     class="mb-2 flex items-center justify-end gap-2"
                                 >
                                     <button
-                                        v-if="selectedForIp(alert.ip).length > 0"
+                                        v-if="
+                                            selectedForIp(alert.ip).length > 0
+                                        "
                                         @click="disableSelectedForIp(alert.ip)"
                                         class="flex items-center gap-1 rounded border border-error/20 bg-error-container/10 px-2 py-1 text-[9px] font-black text-error uppercase transition-colors hover:bg-error-container/25"
                                     >
@@ -311,9 +313,7 @@ const getBadgeStyle = (type: string) => {
                                     </button>
                                     <button
                                         v-if="
-                                            alert.users.some(
-                                                (u) => u.is_active,
-                                            )
+                                            alert.users.some((u) => u.is_active)
                                         "
                                         @click="disableAllForIp(alert)"
                                         class="flex items-center gap-1 rounded bg-error px-2 py-1 text-[9px] font-black text-on-error uppercase transition-colors hover:bg-error/90"
