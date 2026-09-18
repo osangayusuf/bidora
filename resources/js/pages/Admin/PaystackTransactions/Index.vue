@@ -2,6 +2,7 @@
 import { Head, useForm, router, Link } from '@inertiajs/vue3';
 import { CreditCard, Search, RefreshCw } from 'lucide-vue-next';
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import { formatDateTime } from '@/lib/utils';
 import {
     index as paystackIndex,
     requery as paystackRequery,
@@ -231,9 +232,7 @@ const requeryTransaction = (id: number) => {
                                             v-if="tx.paid_at"
                                             >PAID:
                                             {{
-                                                new Date(
-                                                    tx.paid_at,
-                                                ).toLocaleString()
+                                                formatDateTime(tx.paid_at)
                                             }}</span
                                         >
                                         <span
@@ -243,9 +242,7 @@ const requeryTransaction = (id: number) => {
                                             ]"
                                             >INIT:
                                             {{
-                                                new Date(
-                                                    tx.created_at,
-                                                ).toLocaleString()
+                                                formatDateTime(tx.created_at)
                                             }}</span
                                         >
                                     </div>
