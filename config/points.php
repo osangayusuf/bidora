@@ -97,13 +97,12 @@ return [
     |--------------------------------------------------------------------------
     | Fixed-tier packages (e.g. Solo, Jara, Awoof) with a set points bundle,
     | price, and renewal cycle. Managed via the admin Subscription Packages
-    | screen. Charged locally against a saved card authorization rather than
-    | a native Paystack Subscription (see PackageSubscriptionService). This is
-    | the platform's primary points-purchase flow.
+    | screen. Recurring packages run on a native Paystack Plan each, card-only
+    | (see PackageSubscriptionService); one-off packages are a plain charge.
+    | This is the platform's primary points-purchase flow.
     */
     'packages' => [
         'enabled' => env('SUBSCRIPTION_PACKAGES_ENABLED', true),
-        'max_charge_failures' => env('SUBSCRIPTION_PACKAGE_MAX_FAILURES', 3),
     ],
 
 ];

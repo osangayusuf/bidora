@@ -1,6 +1,5 @@
 <?php
 
-use App\Console\Commands\ChargeDuePackageSubscriptionsCommand;
 use App\Console\Commands\MarkIdleAgentsAway;
 use App\Console\Commands\ReconcileAuctionsCommand;
 use App\Services\RewardsService;
@@ -27,9 +26,4 @@ Schedule::call(fn (RewardsService $rewards) => $rewards->processWeeklyLeaderboar
 
 Schedule::command(MarkIdleAgentsAway::class)
     ->everyFiveMinutes()
-    ->runInBackground();
-
-Schedule::command(ChargeDuePackageSubscriptionsCommand::class)
-    ->hourly()
-    ->withoutOverlapping()
     ->runInBackground();

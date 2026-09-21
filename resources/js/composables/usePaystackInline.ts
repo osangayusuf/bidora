@@ -17,6 +17,8 @@ declare global {
                 email: string;
                 amount: number;
                 ref: string;
+                plan?: string;
+                channels?: string[];
                 onClose: () => void;
                 callback: (response: PaystackCallbackResponse) => void;
             }) => PaystackHandler;
@@ -68,6 +70,8 @@ export function usePaystackInline(): {
             email: init.email,
             amount: init.amount_kobo,
             ref: init.reference,
+            ...(init.plan_code ? { plan: init.plan_code } : {}),
+            ...(init.channels ? { channels: init.channels } : {}),
             onClose: () => {},
             callback: (response) => {
                 const url = new URL(callbackUrl, window.location.origin);

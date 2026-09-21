@@ -27,7 +27,7 @@ class SubscriptionPackageController extends Controller
                 ->values(),
             'renewalCycles' => array_map(
                 fn (PackageRenewalCycle $cycle) => ['value' => $cycle->value, 'label' => $cycle->label()],
-                PackageRenewalCycle::cases(),
+                PackageRenewalCycle::sellable(),
             ),
         ]);
     }

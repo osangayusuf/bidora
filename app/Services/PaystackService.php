@@ -33,6 +33,7 @@ class PaystackService
      * @param  string|null  $planCode  When set, this charge subscribes the customer to the
      *                                 plan on success (the initial charge of a recurring subscription).
      * @param  array<string, mixed>  $metadata  Merged into the standard app/user_id metadata.
+     * @param  array<int, string>|null  $channels  Restrict the payment methods offered (e.g. ['card']).
      */
     public function initializeTransaction(
         User $user,
@@ -40,6 +41,7 @@ class PaystackService
         ?string $callbackUrl = null,
         ?string $planCode = null,
         array $metadata = [],
+        ?array $channels = null,
     ): ?array {
         $secret = config('services.paystack.secret');
 
@@ -55,6 +57,10 @@ class PaystackService
 
         if ($planCode !== null) {
             $payload['plan'] = $planCode;
+        }
+
+        if ($channels !== null) {
+            $payload['channels'] = $channels;
         }
 
         $response = Http::withToken($secret)

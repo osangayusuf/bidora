@@ -2,14 +2,11 @@
 
 namespace App\Enums;
 
-use Carbon\CarbonInterface;
-
 /**
- * Renewal cadence for a fixed-tier SubscriptionPackage. Unlike
- * SubscriptionFrequency, these values are never sent to Paystack — package
- * renewals are charged locally against a saved card authorization, so a
- * cycle Paystack has no native interval for (e.g. bi-weekly) is no different
- * from any other.
+ * Renewal cadence for a fixed-tier SubscriptionPackage. Recurring cycles map
+ * onto a native Paystack Plan interval (see paystackInterval()). BI_WEEKLY is
+ * legacy: Paystack has no fortnightly interval, so it can no longer be sold
+ * and only remains so historical rows still load.
  */
 enum PackageRenewalCycle: string
 {
@@ -30,19 +27,32 @@ enum PackageRenewalCycle: string
         };
     }
 
+    /**
+     * The Paystack Plan interval for this cycle, or null when it can't be
+     * a native Paystack subscription (one-off, or the legacy bi-weekly).
+     */
+    public function paystackInterval(): ?SubscriptionFrequency
+    {
+        return match ($this) {
+            self::DAILY => SubscriptionFrequency::DAILY,
+            self::WEEKLY => SubscriptionFrequency::WEEKLY,
+            self::MONTHLY => SubscriptionFrequency::MONTHLY,
+            self::ONE_OFF, self::BI_WEEKLY => null,
+        };
+    }
+
+    /**
+     * Cycles an admin can assign to a package today.
+     *
+     * @return array<int, self>
+     */
+    public static function sellable(): array
+    {
+        return array_values(array_filter(self::cases(), fn (self $cycle) => $cycle !== self::BI_WEEKLY));
+    }
+
     public function isRecurring(): bool
     {
         return $this !== self::ONE_OFF;
-    }
-
-    public function nextChargeAt(CarbonInterface $from): ?CarbonInterface
-    {
-        return match ($this) {
-            self::ONE_OFF => null,
-            self::DAILY => $from->clone()->addDay(),
-            self::WEEKLY => $from->clone()->addWeek(),
-            self::BI_WEEKLY => $from->clone()->addWeeks(2),
-            self::MONTHLY => $from->clone()->addMonthNoOverflow(),
-        };
     }
 }
