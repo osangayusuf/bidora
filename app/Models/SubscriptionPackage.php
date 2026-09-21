@@ -34,6 +34,11 @@ class SubscriptionPackage extends Model
         return $this->hasMany(PointSubscription::class, 'subscription_package_id');
     }
 
+    public function plans(): HasMany
+    {
+        return $this->hasMany(PaystackPlan::class);
+    }
+
     public function priceKobo(): int
     {
         return (int) round($this->price_naira * 100);

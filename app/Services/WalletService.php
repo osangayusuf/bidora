@@ -82,17 +82,12 @@ class WalletService
             ]);
 
             if ($subscription !== null && $package !== null) {
-                // Package subscriptions never receive a `subscription.create`
-                // webhook (there is no native Paystack Subscription object),
-                // so this charge is what confirms them — first charge or
-                // renewal alike.
+                // Recurring packages are renewed by Paystack itself; a charge
+                // confirms the subscription, first charge or renewal alike.
                 $subscription->update([
                     'status' => $package->renewal_cycle->isRecurring()
                         ? SubscriptionStatus::ACTIVE
                         : SubscriptionStatus::COMPLETED,
-                    'next_charge_at' => $package->renewal_cycle->isRecurring()
-                        ? $package->renewal_cycle->nextChargeAt(now())
-                        : null,
                 ]);
             }
 

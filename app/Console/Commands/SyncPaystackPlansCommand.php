@@ -32,6 +32,7 @@ class SyncPaystackPlansCommand extends Command
                 $amountKobo = (int) round($amountNaira * 100);
 
                 $existing = PaystackPlan::query()
+                    ->whereNull('subscription_package_id')
                     ->where('amount_kobo', $amountKobo)
                     ->where('interval', $interval->value)
                     ->first();

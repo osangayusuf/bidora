@@ -12,7 +12,6 @@ const categories = computed(() => (page.props.categories as string[]) ?? []);
 
 const bannerImages = [
     '/images/banner1.png',
-    '/images/banner2.png',
     '/images/banner3.jpeg',
 ];
 const currentBannerIndex = ref(0);

@@ -93,6 +93,8 @@ export type PaystackInit = {
     amount_kobo: number;
     email: string;
     public_key: string;
+    plan_code?: string | null;
+    channels?: string[] | null;
 };
 
 export type WalletTransactionsPaginator =

@@ -3,6 +3,7 @@
 use App\Enums\PackageRenewalCycle;
 use App\Enums\SubscriptionStatus;
 use App\Models\LaunchPromotion;
+use App\Models\PaystackPlan;
 use App\Models\PointSubscription;
 use App\Models\SubscriptionPackage;
 use App\Models\User;
@@ -57,8 +58,41 @@ it('credits a package subscription its fixed points_allocated, not the naira rat
     expect($user->fresh()->points_balance)->toEqual(6000);
 
     $subscription->refresh();
-    expect($subscription->status)->toBe(SubscriptionStatus::ACTIVE)
-        ->and($subscription->next_charge_at)->not->toBeNull();
+    expect($subscription->status)->toBe(SubscriptionStatus::ACTIVE);
+});
+
+it('activates a plan-backed package subscription without scheduling a local charge', function () {
+    $user = User::factory()->create(['points_balance' => 0]);
+    $package = SubscriptionPackage::create([
+        'name' => 'Awoof',
+        'slug' => 'awoof',
+        'renewal_cycle' => PackageRenewalCycle::WEEKLY,
+        'points_allocated' => 6000,
+        'price_naira' => 500,
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+    $plan = PaystackPlan::create([
+        'subscription_package_id' => $package->id,
+        'amount_kobo' => 50000,
+        'interval' => 'weekly',
+        'plan_code' => 'PLN_awoof',
+        'name' => 'Bidora Awoof (Weekly)',
+    ]);
+    $subscription = PointSubscription::create([
+        'user_id' => $user->id,
+        'subscription_package_id' => $package->id,
+        'paystack_plan_id' => $plan->id,
+        'amount_naira' => 500,
+        'status' => SubscriptionStatus::PENDING,
+    ]);
+
+    (new WalletService)->processDeposit($user, 500, 'ref_plan_pkg', [], null, $subscription->id);
+
+    $subscription->refresh();
+    expect($user->fresh()->points_balance)->toEqual(6000)
+        ->and($subscription->status)->toBe(SubscriptionStatus::ACTIVE)
+        ->and($subscription->next_charge_at)->toBeNull();
 });
 
 it('marks a one-off package subscription completed with no next charge', function () {
