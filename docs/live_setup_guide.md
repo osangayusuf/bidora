@@ -4,18 +4,18 @@ Carrygo Digital production processes: **scheduler** (cron), **queue workers** (S
 
 | Item | Value |
 |------|--------|
-| App path | `/var/www/ngcarrygo.com/digital` |
+| App path | `/var/www/html/bidora.com.ng` |
 | Web server | Apache |
-| Domain | `ngcarrygo.com` (adjust if different) |
+| Domain | `bidora.com.ng` (adjust if different) |
 | Reverb (internal) | `127.0.0.1:8080` |
-| Public WebSocket path | `wss://ngcarrygo.com/app/...` |
+| Public WebSocket path | `wss://bidora.com.ng/app/...` |
 
 ---
 
 ## Prerequisites
 
 - Ubuntu server with PHP, Composer, Node (for builds), MySQL/PostgreSQL, and Apache installed.
-- Application deployed to `/var/www/ngcarrygo.com/digital`.
+- Application deployed to `/var/www/html/bidora.com.ng`.
 - SSL certificate configured for Apache (e.g. Certbot).
 
 ---
@@ -280,23 +280,27 @@ sudo chown -R www-data:www-data /var/www/ngcarrygo.com/digital/bootstrap/cache
 
 ## 8. Deploy routine
 
-Run after pulling new code:
+For an in-depth checklist, automated script, and rollback procedures, see the complete [Deployment Guide](file:///Users/osanga/Herd/bidora/docs/deployment_guide.md).
+
+Run after uploading new code (via WinSCP):
 
 ```bash
-cd /var/www/ngcarrygo.com/digital
+cd /var/www/ngcarrygo.com/digital # or /var/www/html/bidora.com.ng
 
 composer install --no-dev --optimize-autoloader
 npm ci && npm run build   # when frontend or VITE_* changed
 
 php artisan migrate --force
-php artisan config:cache
-php artisan route:cache
+php artisan optimize:clear
+php artisan optimize
 php artisan view:cache
 
 php artisan queue:restart
+sudo supervisorctl restart carrygo-worker:*
 sudo supervisorctl restart carrygo-reverb
 sudo systemctl reload apache2
 ```
+
 
 ---
 
