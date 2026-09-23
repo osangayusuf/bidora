@@ -104,7 +104,7 @@ test('subscribe rejects the legacy bi-weekly package', function () {
     app(PackageSubscriptionService::class)->subscribe(User::factory()->create(), $this->package->fresh());
 })->throws(InvalidArgumentException::class, 'not currently available');
 
-test('subscribe rejects a second active subscription to the same package', function () {
+test('subscribe rejects a second active subscription to the same recurring package', function () {
     $user = User::factory()->create();
     PointSubscription::create([
         'user_id' => $user->id,
@@ -115,6 +115,33 @@ test('subscribe rejects a second active subscription to the same package', funct
 
     app(PackageSubscriptionService::class)->subscribe($user, $this->package);
 })->throws(InvalidArgumentException::class);
+
+test('subscribe allows repeat purchases of a one-off package even with an active purchase already', function () {
+    Http::fake([
+        'api.paystack.co/transaction/initialize' => Http::response([
+            'status' => true,
+            'data' => ['access_code' => 'a', 'reference' => 'ref_solo_2'],
+        ], 200),
+    ]);
+
+    $solo = SubscriptionPackage::create([
+        'name' => 'Solo', 'slug' => 'solo', 'renewal_cycle' => PackageRenewalCycle::ONE_OFF,
+        'points_allocated' => 5000, 'price_naira' => 500, 'is_active' => true, 'sort_order' => 0,
+    ]);
+
+    $user = User::factory()->create();
+    PointSubscription::create([
+        'user_id' => $user->id,
+        'subscription_package_id' => $solo->id,
+        'amount_naira' => 500,
+        'status' => SubscriptionStatus::ACTIVE,
+    ]);
+
+    $result = app(PackageSubscriptionService::class)->subscribe($user, $solo);
+
+    expect($result)->not->toBeNull()
+        ->and(PointSubscription::where('subscription_package_id', $solo->id)->count())->toBe(2);
+});
 
 test('subscribe rejects an inactive package', function () {
     $this->package->update(['is_active' => false]);
