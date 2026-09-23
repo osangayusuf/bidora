@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\PackageRenewalCycle;
+use App\Models\PointSubscription;
 use App\Models\SubscriptionPackage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -37,6 +38,10 @@ test('store initializes the first charge and flashes inline payment data', funct
     $response->assertRedirect(route('wallet'))
         ->assertInertiaFlash('paystack_init.reference', 'ref_pkg_store')
         ->assertInertiaFlash('paystack_init.access_code', 'access_abc');
+
+    $subscription = PointSubscription::where('pending_reference', 'ref_pkg_store')->firstOrFail();
+
+    $response->assertInertiaFlash('paystack_init.subscription_id', $subscription->id);
 
     $this->assertDatabaseHas('point_subscriptions', [
         'user_id' => $user->id,

@@ -1,3 +1,5 @@
+import { router } from '@inertiajs/vue3';
+import WalletSubscriptionController from '@/actions/App/Http/Controllers/WalletSubscriptionController';
 import { callback as paymentCallback } from '@/routes/wallet/payment';
 import type { PaystackInit } from '@/types/wallet';
 
@@ -64,6 +66,7 @@ export function usePaystackInline(): {
         }
 
         const callbackUrl = paymentCallback.url();
+        let succeeded = false;
 
         const handler = window.PaystackPop.setup({
             key: init.public_key,
@@ -72,8 +75,24 @@ export function usePaystackInline(): {
             ref: init.reference,
             ...(init.plan_code ? { plan: init.plan_code } : {}),
             ...(init.channels ? { channels: init.channels } : {}),
-            onClose: () => {},
+            onClose: () => {
+                // The popup was dismissed without paying. Cancel the pending
+                // subscription row it created so the package/plan is free to
+                // try again immediately, instead of waiting on the sweep
+                // that clears abandoned attempts.
+                if (succeeded || !init.subscription_id) {
+                    return;
+                }
+
+                router.delete(
+                    WalletSubscriptionController.destroy.url(
+                        init.subscription_id,
+                    ),
+                    { preserveScroll: true },
+                );
+            },
             callback: (response) => {
+                succeeded = true;
                 const url = new URL(callbackUrl, window.location.origin);
                 url.searchParams.set('reference', response.reference);
                 window.location.href = url.toString();

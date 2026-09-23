@@ -95,6 +95,7 @@ export type PaystackInit = {
     public_key: string;
     plan_code?: string | null;
     channels?: string[] | null;
+    subscription_id?: number | null;
 };
 
 export type WalletTransactionsPaginator =

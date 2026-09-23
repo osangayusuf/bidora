@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SubscriptionStatus;
 use App\Http\Requests\Wallet\CreateSubscriptionRequest;
 use App\Models\PointSubscription;
 use App\Services\RecurringPaymentService;
@@ -39,6 +40,7 @@ class WalletSubscriptionController extends Controller
             'amount_kobo' => (int) ($plan->amount_kobo),
             'email' => $user->email,
             'public_key' => config('services.paystack.public'),
+            'subscription_id' => $result['subscription']->id,
         ]);
 
         return back();
@@ -48,6 +50,11 @@ class WalletSubscriptionController extends Controller
     {
         abort_unless($subscription->user_id === $request->user()->id, 403);
 
+        // A pending subscription never took a payment (e.g. the Paystack
+        // popup was closed without completing checkout), so the "you will
+        // not be charged again" toast would be misleading here.
+        $wasPending = $subscription->status === SubscriptionStatus::PENDING;
+
         $cancelled = $this->recurringPaymentService->cancel($subscription);
 
         if (! $cancelled) {
@@ -56,10 +63,12 @@ class WalletSubscriptionController extends Controller
             ]);
         }
 
-        Inertia::flash('toast', [
-            'type' => 'success',
-            'message' => __('Auto top-up cancelled. You will not be charged again.'),
-        ]);
+        if (! $wasPending) {
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => __('Auto top-up cancelled. You will not be charged again.'),
+            ]);
+        }
 
         return back();
     }
