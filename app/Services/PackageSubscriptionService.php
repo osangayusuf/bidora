@@ -33,14 +33,18 @@ class PackageSubscriptionService
             throw new InvalidArgumentException('This package is not currently available.');
         }
 
-        $alreadyActive = PointSubscription::query()
-            ->where('user_id', $user->id)
-            ->where('subscription_package_id', $package->id)
-            ->whereIn('status', [SubscriptionStatus::PENDING, SubscriptionStatus::ACTIVE, SubscriptionStatus::ATTENTION])
-            ->exists();
+        // One-off packages are repeatable purchases, not standing subscriptions,
+        // so a user may buy one any number of times regardless of prior purchases.
+        if ($package->renewal_cycle->isRecurring()) {
+            $alreadyActive = PointSubscription::query()
+                ->where('user_id', $user->id)
+                ->where('subscription_package_id', $package->id)
+                ->whereIn('status', [SubscriptionStatus::PENDING, SubscriptionStatus::ACTIVE, SubscriptionStatus::ATTENTION])
+                ->exists();
 
-        if ($alreadyActive) {
-            throw new InvalidArgumentException('You already have an active subscription to this package.');
+            if ($alreadyActive) {
+                throw new InvalidArgumentException('You already have an active subscription to this package.');
+            }
         }
 
         $interval = $package->renewal_cycle->paystackInterval();
