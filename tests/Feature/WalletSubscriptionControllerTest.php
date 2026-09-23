@@ -39,6 +39,10 @@ test('store initializes the first charge and flashes inline payment data', funct
         ->assertInertiaFlash('paystack_init.reference', 'ref_sub_store')
         ->assertInertiaFlash('paystack_init.access_code', 'access_abc');
 
+    $subscription = PointSubscription::where('pending_reference', 'ref_sub_store')->firstOrFail();
+
+    $response->assertInertiaFlash('paystack_init.subscription_id', $subscription->id);
+
     $this->assertDatabaseHas('point_subscriptions', [
         'user_id' => $user->id,
         'paystack_plan_id' => $this->plan->id,
@@ -55,7 +59,7 @@ test('store rejects an unknown plan id', function () {
         ->assertSessionHasErrors('paystack_plan_id');
 });
 
-test('destroy cancels the owning users subscription', function () {
+test('destroy cancels the owning users subscription and flashes a toast', function () {
     Http::fake([
         'api.paystack.co/subscription/disable' => Http::response(['status' => true], 200),
     ]);
@@ -73,7 +77,27 @@ test('destroy cancels the owning users subscription', function () {
 
     $this->actingAs($user)
         ->delete(route('wallet.subscriptions.destroy', $subscription))
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertInertiaFlash('toast.type', 'success');
+
+    expect($subscription->fresh()->status)->toBe(SubscriptionStatus::CANCELLED);
+});
+
+test('destroy cancels a pending subscription silently, without the auto top-up toast', function () {
+    $user = User::factory()->create();
+    $subscription = PointSubscription::create([
+        'user_id' => $user->id,
+        'paystack_plan_id' => $this->plan->id,
+        'amount_naira' => 1000,
+        'frequency' => 'weekly',
+        'status' => SubscriptionStatus::PENDING,
+        'pending_reference' => 'ref_abandoned',
+    ]);
+
+    $this->actingAs($user)
+        ->delete(route('wallet.subscriptions.destroy', $subscription))
+        ->assertRedirect()
+        ->assertInertiaFlashMissing('toast');
 
     expect($subscription->fresh()->status)->toBe(SubscriptionStatus::CANCELLED);
 });

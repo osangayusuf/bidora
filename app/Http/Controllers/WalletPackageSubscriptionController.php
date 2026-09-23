@@ -39,6 +39,7 @@ class WalletPackageSubscriptionController extends Controller
             'public_key' => config('services.paystack.public'),
             'plan_code' => $result['subscription']->plan?->plan_code,
             'channels' => $result['subscription']->plan !== null ? ['card'] : null,
+            'subscription_id' => $result['subscription']->id,
         ]);
 
         return back();
