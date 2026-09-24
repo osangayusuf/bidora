@@ -18,7 +18,8 @@ class AgentRejectedNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        // Mail delivery disabled.
+        return [];
     }
 
     public function toMail(object $notifiable): MailMessage

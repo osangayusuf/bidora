@@ -1,8 +1,6 @@
 <?php
 
 use App\Models\User;
-use App\Notifications\AgentApprovedNotification;
-use App\Notifications\AgentRejectedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 
@@ -81,7 +79,8 @@ test('admin can approve a pending agent', function () {
         ->and($agent->approved_by)->toBe($admin->id)
         ->and($agent->isApprovedAgent())->toBeTrue();
 
-    Notification::assertSentTo($agent, AgentApprovedNotification::class);
+    // Mail delivery for this notification is disabled.
+    Notification::assertNothingSent();
 });
 
 test('admin can reject a pending agent and delete account', function () {
@@ -103,11 +102,8 @@ test('admin can reject a pending agent and delete account', function () {
         'id' => $agent->id,
     ]);
 
-    // Queued and routed on-demand, since the user row is gone by delivery time
-    Notification::assertSentOnDemand(
-        AgentRejectedNotification::class,
-        fn ($notification, $channels, $notifiable) => $notifiable->routes['mail'] === $agent->email,
-    );
+    // Mail delivery for this notification is disabled.
+    Notification::assertNothingSent();
 });
 
 test('pending agents count is shared correctly with admin users', function () {
