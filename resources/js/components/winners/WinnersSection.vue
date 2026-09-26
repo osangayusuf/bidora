@@ -2,6 +2,7 @@
 import { Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import AppPaginator from '@/components/layout/AppPaginator.vue';
+import YoutubeTestimonialsCta from '@/components/shared/YoutubeTestimonialsCta.vue';
 import { getDaysAgo, maskedMsisdnParts } from '@/lib/utils';
 import { show as auctionShow } from '@/routes/auctions';
 import { winners as winnersRoute } from '@/routes/index';
@@ -99,6 +100,12 @@ function winnerMsisdn(msisdn: string): { prefix: string; suffix: string } {
                 </span>
             </div>
         </header>
+        <YoutubeTestimonialsCta
+            heading="See Our Winners Celebrate"
+            subheading="Watch real winners react to landing their prize — new videos posted every week."
+            compact
+            class="mb-10"
+        />
 
         <div
             v-if="winners.data.length === 0"

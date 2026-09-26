@@ -63,6 +63,8 @@ defineProps<{
         code: string;
         url: string;
         count: number;
+        signup_reward_points: number;
+        deposit_reward_points: number;
         points_earned: number;
     };
 }>();
@@ -303,7 +305,7 @@ function onSpun(pointsWon: number) {
                                 >Friend registers:</span
                             >
                             <span class="font-bold text-on-surface"
-                                >10 pts</span
+                                > {{ referral.signup_reward_points }} pts</span
                             >
                         </div>
                         <div
@@ -316,7 +318,7 @@ function onSpun(pointsWon: number) {
                                 >Friend buys points:</span
                             >
                             <span class="font-bold text-on-surface"
-                                >20 pts</span
+                                >{{ referral.deposit_reward_points }} pts</span
                             >
                         </div>
                     </div>

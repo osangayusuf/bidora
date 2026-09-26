@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\MetricsController;
 use App\Http\Controllers\Admin\PaystackTransactionController;
 use App\Http\Controllers\Admin\PointSubscriptionController;
 use App\Http\Controllers\Admin\PointTransactionController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\RewardsConfigController;
 use App\Http\Controllers\Admin\SubscriptionPackageController;
@@ -41,15 +42,16 @@ use App\Http\Controllers\WalletSubscriptionController;
 use App\Http\Controllers\WalletTopUpController;
 use App\Http\Controllers\WinnersController;
 use App\Http\Middleware\EnsureTermsAccepted;
+use App\Http\Middleware\LogPageVisit;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('open-bids', [OpenBidsController::class, 'index'])->name('open-bids');
+Route::get('/', [HomeController::class, 'index'])->middleware(LogPageVisit::class)->name('home');
+Route::get('open-bids', [OpenBidsController::class, 'index'])->middleware(LogPageVisit::class)->name('open-bids');
 Route::get('how-to-play', [HowToPlayController::class, 'index'])->name('how-to-play');
 Route::get('about', [AboutController::class, 'index'])->name('about');
 Route::get('terms', [TermsController::class, 'index'])->name('terms.index');
 Route::get('terms/{slug}', [TermsController::class, 'show'])->name('terms.show');
-Route::get('auctions/{auction}', [AuctionController::class, 'show'])->name('auctions.show');
+Route::get('auctions/{auction}', [AuctionController::class, 'show'])->middleware(LogPageVisit::class)->name('auctions.show');
 Route::get('auctions/{auction}/timeline', [AuctionTimelineController::class, 'index'])->name('auctions.timeline');
 Route::get('search', [SearchController::class, 'index'])->name('search');
 Route::get('trending', [TrendingController::class, 'index'])->name('trending');
@@ -65,7 +67,7 @@ Route::get('auth/{provider}/callback', [SocialAuthController::class, 'callback']
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('terms/accept', [TermsController::class, 'accept'])->name('terms.accept');
 
-    Route::get('winners', [WinnersController::class, 'index'])->name('winners');
+    Route::get('winners', [WinnersController::class, 'index'])->middleware(LogPageVisit::class)->name('winners');
     Route::get('leaderboard', [LeaderboardController::class, 'index'])->name('leaderboard');
     Route::get('recommended', [RecommendedController::class, 'index'])->name('recommended');
     Route::get('event-items', [EventItemsController::class, 'index'])->name('event-items');
@@ -150,6 +152,10 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::patch('subscription-packages/{package}', [SubscriptionPackageController::class, 'update'])->name('subscription-packages.update');
         Route::post('subscription-packages/{package}/toggle-active', [SubscriptionPackageController::class, 'toggleActive'])->name('subscription-packages.toggle-active');
         Route::delete('subscription-packages/{package}', [SubscriptionPackageController::class, 'destroy'])->name('subscription-packages.destroy');
+
+        // Daily Reports
+        Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('reports/download', [ReportController::class, 'downloadPdf'])->name('reports.download');
 
         // Reviews Moderation
         Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ActivityType;
+use App\Models\Auction;
 use App\Models\User;
 use App\Models\UserActivity;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -92,4 +93,54 @@ test('UserActivityFactory asGuest creates a record with null user_id', function 
     $activity = UserActivity::factory()->asGuest()->create();
 
     expect($activity->user_id)->toBeNull();
+});
+
+// ─── Guest page visit logging ──────────────────────────────────────────────────
+
+test('visiting the home page as a guest logs a home_viewed activity with a null user_id', function () {
+    $this->get(route('home'));
+
+    $this->assertDatabaseHas('user_activities', [
+        'user_id' => null,
+        'type' => ActivityType::HOME_VIEWED->value,
+    ]);
+});
+
+test('visiting open bids as a guest logs an open_bids_viewed activity', function () {
+    $this->get(route('open-bids'));
+
+    $this->assertDatabaseHas('user_activities', [
+        'user_id' => null,
+        'type' => ActivityType::OPEN_BIDS_VIEWED->value,
+    ]);
+});
+
+test('visiting an auction page as a guest logs an auction_viewed activity', function () {
+    $auction = Auction::factory()->create();
+
+    $this->get(route('auctions.show', $auction));
+
+    $this->assertDatabaseHas('user_activities', [
+        'user_id' => null,
+        'type' => ActivityType::AUCTION_VIEWED->value,
+    ]);
+});
+
+test('logged-in users also generate a page-visit activity row, attributed to their account', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get(route('home'));
+
+    $this->assertDatabaseHas('user_activities', [
+        'user_id' => $user->id,
+        'type' => ActivityType::HOME_VIEWED->value,
+    ]);
+});
+
+test('repeat guest visits to the same page within the dedupe window only log once', function () {
+    $this->get(route('home'));
+    $this->get(route('home'));
+    $this->get(route('home'));
+
+    expect(UserActivity::where('type', ActivityType::HOME_VIEWED->value)->count())->toBe(1);
 });

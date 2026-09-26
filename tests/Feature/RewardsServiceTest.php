@@ -1,18 +1,23 @@
 <?php
 
 use App\Enums\RewardSource;
+use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
 use App\Models\Auction;
 use App\Models\Bid;
+use App\Models\LeaderboardSnapshot;
+use App\Models\PointTransaction;
 use App\Models\User;
 use App\Notifications\AchievementUnlocked;
 use App\Notifications\BonusPointsAwarded;
 use App\Notifications\BonusPointsClaimed;
 use App\Notifications\DailyCheckinRewarded;
 use App\Notifications\SpinWheelPrizeWon;
+use App\Notifications\WeeklyLeaderboardBonus;
 use App\Services\AchievementService;
 use App\Services\RewardsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 
 uses(RefreshDatabase::class);
@@ -139,4 +144,56 @@ it('weekly_leaderboard config has top_ranks of 10 with bonuses for all ranks', f
         ->and($bonuses)->toHaveCount(10)
         ->and($bonuses[1])->toBe(200)
         ->and($bonuses[10])->toBe(5);
+});
+
+it('rewards the previous Monday-to-Sunday top three at Monday midnight', function () {
+    Notification::fake();
+
+    Carbon::setTestNow(
+        Carbon::create(2026, 9, 21, 0, 0, 0, 'Africa/Lagos')
+    );
+
+    $users = User::factory()
+        ->count(4)
+        ->create(['bonus_points' => 0]);
+
+    foreach ([500, 300, 100, 50] as $index => $amount) {
+        PointTransaction::create([
+            'user_id' => $users[$index]->id,
+            'type' => TransactionType::BID_DEBIT,
+            'status' => TransactionStatus::COMPLETED,
+            'amount' => $amount,
+            'exchange_rate' => 1,
+            'created_at' => Carbon::create(
+                2026,
+                9,
+                20,
+                23,
+                59,
+                0,
+                'Africa/Lagos'
+            )->utc(),
+        ]);
+    }
+
+    $awarded = app(RewardsService::class)->processWeeklyLeaderboard();
+
+    expect($awarded)->toBe(3);
+
+    foreach ($users->take(3) as $user) {
+        expect($user->fresh()->bonus_points)->toBe(1000);
+    }
+
+    expect($users[3]->fresh()->bonus_points)->toBe(0)
+        ->and(LeaderboardSnapshot::count())->toBe(3)
+        ->and(
+            LeaderboardSnapshot::query()
+                ->where('week_start', '2026-09-14')
+                ->count()
+        )
+        ->toBe(3);
+
+    Notification::assertSentTimes(WeeklyLeaderboardBonus::class, 3);
+
+    Carbon::setTestNow();
 });

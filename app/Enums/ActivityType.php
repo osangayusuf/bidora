@@ -11,6 +11,9 @@ enum ActivityType: string
     case TWO_FACTOR_ENABLED = 'two_factor_enabled';
     case TWO_FACTOR_DISABLED = 'two_factor_disabled';
     case AUCTION_VIEWED = 'auction_viewed';
+    case HOME_VIEWED = 'home_viewed';
+    case WINNERS_VIEWED = 'winners_viewed';
+    case OPEN_BIDS_VIEWED = 'open_bids_viewed';
     case BID_PLACED = 'bid_placed';
     case AUCTION_WON = 'auction_won';
     case POINTS_DEPOSITED = 'points_deposited';

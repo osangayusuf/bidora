@@ -31,6 +31,18 @@ it('requires authentication for task center', function () {
     $this->get(route('tasks'))->assertRedirect();
 });
 
+it('shows the configured referral reward amounts on the task center page', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('tasks'))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->where('referral.signup_reward_points', (int) config('points.referral.referrer_signup_points'))
+            ->where('referral.deposit_reward_points', (int) config('points.referral.referrer_first_deposit_points'))
+        );
+});
+
 it('can check in via post', function () {
     $user = User::factory()->create(['last_checkin_date' => null]);
 

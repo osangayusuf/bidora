@@ -15,6 +15,7 @@ import {
     UserCheck,
     ListFilter,
     BarChart3,
+    ClipboardList,
     ShieldAlert,
     Trophy,
 } from 'lucide-vue-next';
@@ -28,6 +29,7 @@ import { index as bidsIndex } from '@/routes/admin/bids';
 import { index as metricsIndex } from '@/routes/admin/metrics';
 import { index as paystackTransactionsIndex } from '@/routes/admin/paystack-transactions';
 import { index as pointSubscriptionsIndex } from '@/routes/admin/point-subscriptions';
+import { index as reportsIndex } from '@/routes/admin/reports';
 import { index as pointTransactionsIndex } from '@/routes/admin/point-transactions';
 import { index as reviewsIndex } from '@/routes/admin/reviews';
 import { index as rewardsConfigIndex } from '@/routes/admin/rewards-config';
@@ -54,6 +56,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 const navItems = [
     { name: 'Metrics', href: metricsIndex.url(), icon: BarChart3 },
     { name: 'Activity Log', href: activityLogIndex.url(), icon: ShieldAlert },
+    { name: 'Daily Reports', href: reportsIndex.url(), icon: ClipboardList },
     { name: 'Auctions', href: auctionsIndex.url(), icon: Gavel },
     { name: 'Winners', href: winnersIndex.url(), icon: Trophy },
     { name: 'Users', href: usersIndex.url(), icon: Users },

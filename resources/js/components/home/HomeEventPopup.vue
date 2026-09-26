@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useAutoDismiss } from '@/composables/useAutoDismiss';
 import { usePlaceBidModal } from '@/composables/usePlaceBidModal';
 import { getRemainingTime } from '@/lib/utils';
 import type { Bid } from '@/types/auction';
@@ -11,12 +12,15 @@ const props = defineProps<{
 
 const { open } = usePlaceBidModal();
 const isVisible = ref(false);
+const { start, clear } = useAutoDismiss(isVisible);
 
 onMounted(() => {
     isVisible.value = true;
+    start();
 });
 
 function dismiss(): void {
+    clear();
     isVisible.value = false;
 }
 

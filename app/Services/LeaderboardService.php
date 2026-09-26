@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 class LeaderboardService
 {
+    private const BUSINESS_TIMEZONE = 'Africa/Lagos';
+
     private const int TOP_BIDDERS_PER_AUCTION = 3;
 
     public const int AUCTION_SHOW_TOP_BIDDERS = 10;
@@ -135,7 +137,9 @@ class LeaderboardService
      */
     public function currentWeekTopBidders(int $limit = 10): array
     {
-        $weekStart = Carbon::now()->startOfWeek();
+        $weekStart = Carbon::now(self::BUSINESS_TIMEZONE)
+            ->startOfWeek(Carbon::MONDAY)
+            ->utc();
 
         $rows = DB::table('point_transactions')
             ->join('users', 'users.id', '=', 'point_transactions.user_id')

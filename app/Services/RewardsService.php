@@ -19,6 +19,8 @@ use RuntimeException;
 
 class RewardsService
 {
+    private const BUSINESS_TIMEZONE = 'Africa/Lagos';
+
     public function __construct(
         private readonly WalletService $walletService,
     ) {}
@@ -151,12 +153,19 @@ class RewardsService
 
     public function processWeeklyLeaderboard(): int
     {
-        $weekStart = Carbon::now()->startOfWeek();
+        // The job runs at Monday 00:00, so reward the Monday-Sunday week that just ended.
+        $currentWeekStart = Carbon::now(self::BUSINESS_TIMEZONE)
+            ->startOfWeek(Carbon::MONDAY);
+        $weekStart = $currentWeekStart->copy()->subWeek();
+        $weekEnd = $currentWeekStart->copy();
         $weekStartDate = $weekStart->toDateString();
         $topRanks = (int) config('rewards.weekly_leaderboard.top_ranks', 3);
         $bonuses = config('rewards.weekly_leaderboard.bonuses', []);
 
-        $rankings = $this->weeklyBidRankings($weekStart);
+        $rankings = $this->weeklyBidRankings(
+            $weekStart->copy()->utc(),
+            $weekEnd->copy()->utc(),
+        );
 
         if ($rankings->isEmpty()) {
             return 0;
@@ -239,12 +248,13 @@ class RewardsService
     /**
      * @return Collection<int, object{user_id: int, total_bid_pts: int}>
      */
-    private function weeklyBidRankings(Carbon $weekStart): Collection
+    private function weeklyBidRankings(Carbon $weekStart, Carbon $weekEnd): Collection
     {
         return DB::table('point_transactions')
             ->where('type', TransactionType::BID_DEBIT->value)
             ->where('status', TransactionStatus::COMPLETED->value)
             ->where('created_at', '>=', $weekStart)
+            ->where('created_at', '<', $weekEnd)
             ->selectRaw('user_id, SUM(amount) as total_bid_pts')
             ->groupBy('user_id')
             ->orderByDesc('total_bid_pts')

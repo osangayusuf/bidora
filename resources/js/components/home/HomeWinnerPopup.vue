@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useAutoDismiss } from '@/composables/useAutoDismiss';
 import type { Winner } from '@/pages/Home/Index.vue';
 
 const SESSION_KEY = 'winner_popup_dismissed';
@@ -9,14 +10,17 @@ const props = defineProps<{
 }>();
 
 const isVisible = ref(false);
+const { start, clear } = useAutoDismiss(isVisible);
 
 onMounted(() => {
     if (!sessionStorage.getItem(SESSION_KEY)) {
         isVisible.value = true;
+        start();
     }
 });
 
 function dismiss(): void {
+    clear();
     sessionStorage.setItem(SESSION_KEY, '1');
     isVisible.value = false;
 }

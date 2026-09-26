@@ -42,8 +42,8 @@ test('new users can register with a valid referral code and award points to both
     // Verify points were awarded to referee
     expect((float) $referee->bonus_points)->toBe(10.00);
 
-    // Verify points were awarded to referrer
-    expect((float) $referrer->refresh()->bonus_points)->toBe(10.00);
+    // Verify points were awarded to referrer  (referrer_signup_points)
+    expect((float) $referrer->refresh()->bonus_points)->toBe(1250.00);
 
     // Check transactions
     $refereeTx = PointTransaction::where('user_id', $referee->id)
@@ -87,8 +87,8 @@ test('referrer is awarded bonus points on referee first deposit only', function 
     $walletService = app(WalletService::class);
     $walletService->processDeposit($referee, 1000.00, 'ref_first_dep');
 
-    // Referrer should get 20 bonus points
-    expect((float) $referrer->refresh()->bonus_points)->toBe(20.00);
+    // Referrer should get 750 bonus points (referrer_first_deposit_points)
+    expect((float) $referrer->refresh()->bonus_points)->toBe(750.00);
 
     $referrerDepositTx = PointTransaction::where('user_id', $referrer->id)
         ->where('type', TransactionType::BONUS_AWARD)
