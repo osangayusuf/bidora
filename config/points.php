@@ -67,14 +67,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | One-off Deposits
+    | Top-ups
     |--------------------------------------------------------------------------
-    | The original single-charge "buy points" flow. Kept fully functional
-    | (routes, controller, services) so it can be re-enabled without a code
-    | change, but hidden from the Wallet page for regular users while the
-    | platform is subscription-only. Does not affect admin screens.
+    | Standalone points purchases: the user enters any Naira amount between
+    | the deposit limits above and is credited at points_per_naira. Shown on
+    | the Wallet page above the subscription packages.
     */
-    'one_off_deposits_enabled' => env('ONE_OFF_DEPOSITS_ENABLED', false),
+    'top_ups' => [
+        'enabled' => env('TOP_UPS_ENABLED', true),
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -95,11 +96,10 @@ return [
     |--------------------------------------------------------------------------
     | Subscription Packages
     |--------------------------------------------------------------------------
-    | Fixed-tier packages (e.g. Solo, Jara, Awoof) with a set points bundle,
-    | price, and renewal cycle. Managed via the admin Subscription Packages
-    | screen. Recurring packages run on a native Paystack Plan each, card-only
-    | (see PackageSubscriptionService); one-off packages are a plain charge.
-    | This is the platform's primary points-purchase flow.
+    | Fixed-tier recurring packages (e.g. Jara, Awoof) with a set points
+    | bundle, price, and renewal cycle. Managed via the admin Subscription
+    | Packages screen. Each package runs on a native Paystack Plan, card-only
+    | (see PackageSubscriptionService). One-off purchases are top-ups above.
     */
     'packages' => [
         'enabled' => env('SUBSCRIPTION_PACKAGES_ENABLED', true),

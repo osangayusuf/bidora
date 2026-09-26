@@ -6,6 +6,7 @@ use App\Models\PaystackTransaction;
 use App\Models\PaystackWebhookLog;
 use App\Models\User;
 use App\Services\RecurringPaymentService;
+use App\Services\TopUpService;
 use App\Services\WalletService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -25,7 +26,7 @@ class ProcessPaystackWebhookJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(WalletService $walletService, RecurringPaymentService $recurringPaymentService): void
+    public function handle(WalletService $walletService, RecurringPaymentService $recurringPaymentService, TopUpService $topUpService): void
     {
         $log = PaystackWebhookLog::find($this->paystackWebhookLogId);
 
@@ -42,7 +43,7 @@ class ProcessPaystackWebhookJob implements ShouldQueue
 
             switch ($event) {
                 case 'charge.success':
-                    $status = $this->handleChargeSuccess($data, $walletService, $recurringPaymentService) ?? $status;
+                    $status = $this->handleChargeSuccess($data, $walletService, $recurringPaymentService, $topUpService) ?? $status;
                     break;
                 case 'subscription.create':
                     $recurringPaymentService->handleSubscriptionCreate($data);
@@ -71,14 +72,14 @@ class ProcessPaystackWebhookJob implements ShouldQueue
     }
 
     /**
-     * Handles both a user-initiated single deposit and the recurring charges
-     * Paystack generates on its own schedule for an active subscription —
-     * both arrive as `charge.success` and are credited identically.
+     * Handles a user-initiated top-up and the recurring charges Paystack
+     * generates on its own schedule for an active subscription — both
+     * arrive as `charge.success` and are credited identically.
      *
      * @param  array<string, mixed>  $data
      * @return string|null A log status override (e.g. 'ignored'), or null to record 'processed'.
      */
-    private function handleChargeSuccess(array $data, WalletService $walletService, RecurringPaymentService $recurringPaymentService): ?string
+    private function handleChargeSuccess(array $data, WalletService $walletService, RecurringPaymentService $recurringPaymentService, TopUpService $topUpService): ?string
     {
         $reference = $data['reference'] ?? null;
         $amountInKobo = $data['amount'] ?? 0;
@@ -122,7 +123,8 @@ class ProcessPaystackWebhookJob implements ShouldQueue
             ]);
         }
 
-        $subscription = $recurringPaymentService->resolveSubscriptionForCharge($data);
+        $topUp = $topUpService->resolveForCharge($data);
+        $subscription = $topUp === null ? $recurringPaymentService->resolveSubscriptionForCharge($data) : null;
 
         // Credit the user
         $walletService->processDeposit(
@@ -132,6 +134,7 @@ class ProcessPaystackWebhookJob implements ShouldQueue
             $data,
             $paystackTransaction->id,
             $subscription?->id,
+            $topUp?->id,
         );
 
         // Update PaystackTransaction

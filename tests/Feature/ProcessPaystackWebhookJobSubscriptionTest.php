@@ -9,6 +9,7 @@ use App\Models\PointTransaction;
 use App\Models\User;
 use App\Services\PaystackService;
 use App\Services\RecurringPaymentService;
+use App\Services\TopUpService;
 use App\Services\WalletService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -20,6 +21,7 @@ function handleWebhookLog(PaystackWebhookLog $log): void
     (new ProcessPaystackWebhookJob($log->id))->handle(
         new WalletService,
         new RecurringPaymentService(new PaystackService),
+        new TopUpService(new PaystackService),
     );
 }
 

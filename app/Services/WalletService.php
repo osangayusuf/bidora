@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Enums\RewardSource;
 use App\Enums\SubscriptionStatus;
+use App\Enums\TopUpStatus;
 use App\Enums\TransactionType;
 use App\Models\LaunchPromotion;
 use App\Models\PaystackTransaction;
 use App\Models\PointSubscription;
 use App\Models\PointTransaction;
+use App\Models\TopUp;
 use App\Models\User;
 use App\Notifications\BonusPointsAwarded;
 use App\Notifications\BonusPointsClaimed;
@@ -30,6 +32,7 @@ class WalletService
         array $metadata = [],
         ?int $paystackTransactionId = null,
         ?int $pointSubscriptionId = null,
+        ?int $topUpId = null,
     ): PointTransaction {
         $existing = PointTransaction::query()
             ->where('provider_reference', $reference)
@@ -45,17 +48,26 @@ class WalletService
             : null;
         $package = $subscription?->subscriptionPackage;
 
-        return DB::transaction(function () use ($user, $nairaAmount, $reference, $metadata, $paystackTransactionId, $pointSubscriptionId, $subscription, $package) {
-            // A package subscription credits its fixed points_allocated
-            // (which may include a bonus over the standard rate) rather than
-            // the naira x points_per_naira conversion used everywhere else.
-            $pointsAmount = $package !== null
-                ? $package->points_allocated
-                : $nairaAmount * (float) config('points.points_per_naira');
+        $topUp = $topUpId !== null
+            ? TopUp::where('user_id', $user->id)->find($topUpId)
+            : null;
 
-            $exchangeRate = $package !== null
-                ? ($nairaAmount > 0 ? $pointsAmount / $nairaAmount : 0)
-                : (float) config('points.points_per_naira');
+        return DB::transaction(function () use ($user, $nairaAmount, $reference, $metadata, $paystackTransactionId, $pointSubscriptionId, $subscription, $package, $topUp) {
+            // A package subscription credits its fixed points_allocated
+            // (which may include a bonus over the standard rate) and a
+            // top-up credits at the rate locked in when it was started;
+            // anything else uses the current naira x points_per_naira rate.
+            [$pointsAmount, $exchangeRate] = match (true) {
+                $package !== null => [
+                    $package->points_allocated,
+                    $nairaAmount > 0 ? $package->points_allocated / $nairaAmount : 0,
+                ],
+                $topUp !== null => [$topUp->pointsFor($nairaAmount), $topUp->points_per_naira],
+                default => [
+                    $nairaAmount * (float) config('points.points_per_naira'),
+                    (float) config('points.points_per_naira'),
+                ],
+            };
 
             $user = User::where('id', $user->id)->lockForUpdate()->firstOrFail();
 
@@ -72,6 +84,7 @@ class WalletService
                 'user_id' => $user->id,
                 'paystack_transaction_id' => $paystackTransactionId,
                 'point_subscription_id' => $pointSubscriptionId,
+                'top_up_id' => $topUp?->id,
                 'type' => TransactionType::DEPOSIT,
                 'amount' => $pointsAmount,
                 'naira_amount' => $nairaAmount,
@@ -90,6 +103,11 @@ class WalletService
                         : SubscriptionStatus::COMPLETED,
                 ]);
             }
+
+            $topUp?->update([
+                'status' => TopUpStatus::COMPLETED,
+                'paid_at' => now(),
+            ]);
 
             $user->notify(new PaymentConfirmed($transaction));
 
@@ -114,8 +132,13 @@ class WalletService
     /**
      * Finalize a Paystack deposit after inline payment or callback verification.
      */
-    public function finalizePaystackDeposit(User $user, string $reference, array $paystackData, ?int $pointSubscriptionId = null): ?PointTransaction
-    {
+    public function finalizePaystackDeposit(
+        User $user,
+        string $reference,
+        array $paystackData,
+        ?int $pointSubscriptionId = null,
+        ?int $topUpId = null,
+    ): ?PointTransaction {
         $status = $paystackData['status'] ?? null;
 
         if ($status !== 'success') {
@@ -137,6 +160,7 @@ class WalletService
             $paystackData,
             $paystackTransaction?->id,
             $pointSubscriptionId,
+            $topUpId,
         );
 
         if ($paystackTransaction !== null && $paystackTransaction->status !== 'success') {

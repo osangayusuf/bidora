@@ -1,10 +1,12 @@
 <?php
 
+use App\Enums\TopUpStatus;
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
 use App\Models\PaystackPlan;
 use App\Models\PaystackTransaction;
 use App\Models\PointTransaction;
+use App\Models\TopUp;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -110,13 +112,15 @@ test('authenticated users can view wallet page', function () {
             ->has('transactions.data', 1)
             ->where('balances.points_balance', 500)
             ->where('balances.bonus_points', 100)
-            ->where('walletConfig.one_off_deposits_enabled', false)
+            ->where('walletConfig.top_ups_enabled', true)
             ->where('walletConfig.recurring_enabled', false)
             ->where('walletConfig.packages_enabled', true)
         );
 });
 
-test('deposit initializes paystack and flashes inline payment data', function () {
+test('top-up records a pending top-up at the configured rate and flashes inline payment data', function () {
+    config(['points.points_per_naira' => 12]);
+
     Http::fake([
         'api.paystack.co/transaction/initialize' => Http::response([
             'status' => true,
@@ -132,12 +136,26 @@ test('deposit initializes paystack and flashes inline payment data', function ()
 
     $response = $this->actingAs($user)
         ->from(route('wallet'))
-        ->post(route('wallet.deposit'), ['amount' => 1000]);
+        ->post(route('wallet.top-ups.store'), ['amount' => 1250]);
 
     $response->assertRedirect(route('wallet'))
         ->assertInertiaFlash('paystack_init.reference', 'ref_wallet_test')
         ->assertInertiaFlash('paystack_init.access_code', 'access_abc')
-        ->assertInertiaFlash('paystack_init.amount_kobo', 100000);
+        ->assertInertiaFlash('paystack_init.amount_kobo', 125000);
+
+    $topUp = TopUp::sole();
+
+    expect($topUp->user_id)->toBe($user->id)
+        ->and($topUp->reference)->toBe('ref_wallet_test')
+        ->and((float) $topUp->amount_naira)->toEqual(1250.0)
+        ->and($topUp->points_per_naira)->toEqual(12.0)
+        ->and($topUp->points)->toBe(15000)
+        ->and($topUp->status)->toBe(TopUpStatus::PENDING);
+
+    Http::assertSent(fn ($request) => $request['metadata']['top_up_id'] === $topUp->id
+        && $request['metadata']['purpose'] === 'top_up'
+        && ! isset($request['plan'])
+        && ! isset($request['channels']));
 
     $this->assertDatabaseHas('paystack_transactions', [
         'user_id' => $user->id,
@@ -147,6 +165,7 @@ test('deposit initializes paystack and flashes inline payment data', function ()
 });
 
 test('payment callback verifies paystack and credits points once', function () {
+    config(['points.points_per_naira' => 10]);
     $user = User::factory()->create(['points_balance' => 0]);
 
     PaystackTransaction::create([
@@ -184,6 +203,40 @@ test('payment callback verifies paystack and credits points once', function () {
     expect(PointTransaction::where('provider_reference', 'ref_callback')->count())->toBe(1);
 });
 
+test('payment callback credits a top-up at its locked rate even after the rate changes', function () {
+    $topUp = TopUp::factory()->create([
+        'reference' => 'ref_top_up_cb',
+        'amount_naira' => 500,
+        'points_per_naira' => 10,
+        'points' => 5000,
+    ]);
+
+    config(['points.points_per_naira' => 25]);
+
+    Http::fake([
+        'api.paystack.co/transaction/verify/ref_top_up_cb' => Http::response([
+            'status' => true,
+            'data' => [
+                'status' => 'success',
+                'reference' => 'ref_top_up_cb',
+                'amount' => 50000,
+                'metadata' => ['user_id' => $topUp->user_id, 'top_up_id' => $topUp->id],
+            ],
+        ], 200),
+    ]);
+
+    $this->actingAs($topUp->user)
+        ->get(route('wallet.payment.callback', ['reference' => 'ref_top_up_cb']))
+        ->assertRedirect(route('wallet', ['payment' => 'success', 'reference' => 'ref_top_up_cb']));
+
+    $topUp->refresh();
+
+    expect($topUp->status)->toBe(TopUpStatus::COMPLETED)
+        ->and($topUp->pointTransaction->amount)->toEqual(5000)
+        ->and($topUp->pointTransaction->point_subscription_id)->toBeNull()
+        ->and((float) $topUp->user->points_balance)->toEqual(5000.0);
+});
+
 test('claim bonus converts all bonus points to spendable balance', function () {
     $user = User::factory()->create([
         'points_balance' => 0,
@@ -215,13 +268,15 @@ test('claim bonus fails when user has no bonus points', function () {
         ->assertSessionHasErrors('bonus');
 });
 
-test('deposit rejects amounts below minimum', function () {
+test('top-up rejects amounts below minimum', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
         ->from(route('wallet'))
-        ->post(route('wallet.deposit'), ['amount' => 50])
+        ->post(route('wallet.top-ups.store'), ['amount' => 50])
         ->assertSessionHasErrors('amount');
+
+    expect(TopUp::count())->toBe(0);
 });
 
 test('wallet includes auction id for bid transactions', function () {

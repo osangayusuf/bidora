@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'user_id',
     'paystack_transaction_id',
     'point_subscription_id',
+    'top_up_id',
     'type',
     'amount',
     'naira_amount',
@@ -39,5 +40,10 @@ class PointTransaction extends Model
     public function subscription(): BelongsTo
     {
         return $this->belongsTo(PointSubscription::class, 'point_subscription_id');
+    }
+
+    public function topUp(): BelongsTo
+    {
+        return $this->belongsTo(TopUp::class);
     }
 }

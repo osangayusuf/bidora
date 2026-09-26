@@ -77,26 +77,11 @@ test('subscribe reuses the package plan while its price is unchanged and makes a
     expect(PaystackPlan::pluck('plan_code')->all())->toBe(['PLN_one', 'PLN_two']);
 });
 
-test('subscribe on a one-off package is a plain charge with no plan and no channel restriction', function () {
-    Http::fake([
-        'api.paystack.co/transaction/initialize' => Http::response([
-            'status' => true,
-            'data' => ['access_code' => 'a', 'reference' => 'ref_solo'],
-        ], 200),
-    ]);
+test('subscribe rejects a legacy one-off package', function () {
+    $this->package->update(['renewal_cycle' => PackageRenewalCycle::ONE_OFF]);
 
-    $solo = SubscriptionPackage::create([
-        'name' => 'Solo', 'slug' => 'solo', 'renewal_cycle' => PackageRenewalCycle::ONE_OFF,
-        'points_allocated' => 5000, 'price_naira' => 500, 'is_active' => true, 'sort_order' => 0,
-    ]);
-
-    $result = app(PackageSubscriptionService::class)->subscribe(User::factory()->create(), $solo);
-
-    expect($result['subscription']->paystack_plan_id)->toBeNull();
-
-    Http::assertSent(fn ($request) => ! isset($request['plan']) && ! isset($request['channels']));
-    expect(PaystackPlan::count())->toBe(0);
-});
+    app(PackageSubscriptionService::class)->subscribe(User::factory()->create(), $this->package->fresh());
+})->throws(InvalidArgumentException::class, 'not currently available');
 
 test('subscribe rejects the legacy bi-weekly package', function () {
     $this->package->update(['renewal_cycle' => PackageRenewalCycle::BI_WEEKLY]);
@@ -115,33 +100,6 @@ test('subscribe rejects a second active subscription to the same recurring packa
 
     app(PackageSubscriptionService::class)->subscribe($user, $this->package);
 })->throws(InvalidArgumentException::class);
-
-test('subscribe allows repeat purchases of a one-off package even with an active purchase already', function () {
-    Http::fake([
-        'api.paystack.co/transaction/initialize' => Http::response([
-            'status' => true,
-            'data' => ['access_code' => 'a', 'reference' => 'ref_solo_2'],
-        ], 200),
-    ]);
-
-    $solo = SubscriptionPackage::create([
-        'name' => 'Solo', 'slug' => 'solo', 'renewal_cycle' => PackageRenewalCycle::ONE_OFF,
-        'points_allocated' => 5000, 'price_naira' => 500, 'is_active' => true, 'sort_order' => 0,
-    ]);
-
-    $user = User::factory()->create();
-    PointSubscription::create([
-        'user_id' => $user->id,
-        'subscription_package_id' => $solo->id,
-        'amount_naira' => 500,
-        'status' => SubscriptionStatus::ACTIVE,
-    ]);
-
-    $result = app(PackageSubscriptionService::class)->subscribe($user, $solo);
-
-    expect($result)->not->toBeNull()
-        ->and(PointSubscription::where('subscription_package_id', $solo->id)->count())->toBe(2);
-});
 
 test('subscribe rejects an inactive package', function () {
     $this->package->update(['is_active' => false]);

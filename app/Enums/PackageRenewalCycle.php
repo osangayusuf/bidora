@@ -4,9 +4,10 @@ namespace App\Enums;
 
 /**
  * Renewal cadence for a fixed-tier SubscriptionPackage. Recurring cycles map
- * onto a native Paystack Plan interval (see paystackInterval()). BI_WEEKLY is
- * legacy: Paystack has no fortnightly interval, so it can no longer be sold
- * and only remains so historical rows still load.
+ * onto a native Paystack Plan interval (see paystackInterval()). ONE_OFF and
+ * BI_WEEKLY are legacy and can no longer be sold: one-off purchases are now
+ * standalone top-ups, and Paystack has no fortnightly interval. Both only
+ * remain so historical rows still load.
  */
 enum PackageRenewalCycle: string
 {
@@ -48,7 +49,7 @@ enum PackageRenewalCycle: string
      */
     public static function sellable(): array
     {
-        return array_values(array_filter(self::cases(), fn (self $cycle) => $cycle !== self::BI_WEEKLY));
+        return array_values(array_filter(self::cases(), fn (self $cycle) => $cycle->paystackInterval() !== null));
     }
 
     public function isRecurring(): bool
