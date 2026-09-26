@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useAutoDismiss } from '@/composables/useAutoDismiss';
 import { getLaunchCountdownParts, hasLaunched } from '@/lib/utils';
 
 const isVisible = ref(false);
+const { start, clear } = useAutoDismiss(isVisible);
 
 onMounted(() => {
     if (!hasLaunched()) {
         isVisible.value = true;
+        start();
     }
 });
 
 function dismiss(): void {
+    clear();
     isVisible.value = false;
 }
 

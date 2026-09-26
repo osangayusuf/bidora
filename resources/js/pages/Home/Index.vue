@@ -13,6 +13,7 @@ import HomePromoSection from '@/components/home/HomePromoSection.vue';
 import HomeTestimonialsSection from '@/components/home/HomeTestimonialsSection.vue';
 import HomeWinnerPopup from '@/components/home/HomeWinnerPopup.vue';
 import HomeWinnersSection from '@/components/home/HomeWinnersSection.vue';
+import YoutubeTestimonialsCta from '@/components/shared/YoutubeTestimonialsCta.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { formatPrice } from '@/lib/utils';
 import {
@@ -917,6 +918,11 @@ const getCategoryIcon = (category: string): string => {
             v-if="props.reviews && props.reviews.length > 0"
             :reviews="props.reviews"
         />
+
+         <!-- YOUTUBE TESTIMONIALS CTA -->
+        <div class="mx-auto max-w-screen-2xl px-8 py-4">
+            <YoutubeTestimonialsCta />
+        </div>
 
         <HomePromoSection />
     </div>

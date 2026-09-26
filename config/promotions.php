@@ -10,7 +10,7 @@ return [
     */
     'winner_popup' => [
         'enabled' => true,
-        'winner_id' => null, // Auction ID whose winner should be featured
+        'winner_id' => 66, // Auction ID whose winner should be featured
     ],
 
     /*
@@ -22,6 +22,6 @@ return [
     */
     'event_popup' => [
         'enabled' => true,
-        'auction_id' => null, // Auction ID to promote as a special event
+        'auction_id' => 2139, // Auction ID to promote as a special event
     ],
 ];

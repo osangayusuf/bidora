@@ -37,6 +37,8 @@ class TaskCenterPageService
                 'code' => $user->referral_code,
                 'url' => route('register', ['ref' => $user->referral_code]),
                 'count' => (int) User::where('referred_by', $user->id)->count(),
+                'signup_reward_points' => (int) config('points.referral.referrer_signup_points'),
+                'deposit_reward_points' => (int) config('points.referral.referrer_first_deposit_points'),
                 'points_earned' => (int) PointTransaction::where('user_id', $user->id)
                     ->where('type', TransactionType::BONUS_AWARD)
                     ->whereIn('metadata->source', [

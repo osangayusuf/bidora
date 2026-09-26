@@ -3,6 +3,7 @@ import { router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import BidCard from '@/components/cards/BidCard.vue';
 import AppPaginator from '@/components/layout/AppPaginator.vue';
+import YoutubeTestimonialsCta from '@/components/shared/YoutubeTestimonialsCta.vue';
 import { openBids } from '@/routes/index';
 import type { Bid, LengthAwarePaginator } from '@/types/auction';
 
@@ -148,6 +149,13 @@ function goToPage(page: number): void {
                 </span>
             </div>
         </header>
+        
+        <YoutubeTestimonialsCta
+    	   heading="Not Sure Yet? Watch Winners Share Their Story"
+    	   subheading="See real testimonials from verified winners before you place your next bid."
+    	   compact
+    	   class="mb-10"
+	/>
 
         <div
             v-if="bids.data.length === 0"

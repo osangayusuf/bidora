@@ -185,6 +185,20 @@ const formatMetadata = (metadata: any) => {
         .join(' | ');
 };
 
+// Rows with no linked account fall into two distinct buckets: someone who
+// TRIED to log in but the credentials didn't match any account
+// ("Guest Session"), vs. someone who never attempted to log in at all and
+// was just browsing the public site ("Non users").
+const NON_USER_ACTIVITY_TYPES = [
+    'home_viewed',
+    'winners_viewed',
+    'open_bids_viewed',
+    'auction_viewed',
+];
+
+const getAnonymousLabel = (type: string) =>
+    NON_USER_ACTIVITY_TYPES.includes(type) ? 'Non users' : 'Guest Session';
+
 const getBadgeStyle = (type: string) => {
     const lower = type.toLowerCase();
 
@@ -588,7 +602,7 @@ const getBadgeStyle = (type: string) => {
                                     <span
                                         v-else
                                         class="text-on-surface-variant italic"
-                                        >Guest Session</span
+                                        >{{ getAnonymousLabel(act.type) }}</span
                                     >
                                 </td>
                                 <td class="px-6 py-4">
