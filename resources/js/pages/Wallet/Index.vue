@@ -5,9 +5,9 @@ import SettingsPanel from '@/components/settings/SettingsPanel.vue';
 import SettingsShell from '@/components/settings/SettingsShell.vue';
 import WalletBalanceCards from '@/components/wallet/WalletBalanceCards.vue';
 import WalletClaimBonus from '@/components/wallet/WalletClaimBonus.vue';
-import WalletDepositForm from '@/components/wallet/WalletDepositForm.vue';
 import WalletPackagesSection from '@/components/wallet/WalletPackagesSection.vue';
 import WalletRecurringSection from '@/components/wallet/WalletRecurringSection.vue';
+import WalletTopUpForm from '@/components/wallet/WalletTopUpForm.vue';
 import WalletTransactionsSection from '@/components/wallet/WalletTransactionsSection.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { appToast } from '@/lib/appToast';
@@ -85,6 +85,10 @@ watch(
                     :balances="balances"
                     :wallet-config="walletConfig"
                 />
+                <WalletTopUpForm
+                    v-if="walletConfig.top_ups_enabled"
+                    :wallet-config="walletConfig"
+                />
                 <WalletPackagesSection
                     v-if="walletConfig.packages_enabled"
                     :packages="packages"
@@ -94,10 +98,6 @@ watch(
                     v-if="walletConfig.recurring_enabled"
                     :available-plans="availablePlans"
                     :subscriptions="planSubscriptions"
-                />
-                <WalletDepositForm
-                    v-if="walletConfig.one_off_deposits_enabled"
-                    :wallet-config="walletConfig"
                 />
                 <WalletClaimBonus :bonus-points="balances.bonus_points" />
                 <WalletTransactionsSection :transactions="transactions" />

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
-import WalletController from '@/actions/App/Http/Controllers/WalletController';
+import WalletTopUpController from '@/actions/App/Http/Controllers/WalletTopUpController';
 import { usePaystackInline } from '@/composables/usePaystackInline';
 import { appToast } from '@/lib/appToast';
 import type { PaystackInit, WalletConfig } from '@/types/wallet';
@@ -37,7 +37,7 @@ function selectPreset(preset: number): void {
     amount.value = String(preset);
 }
 
-async function initiateDeposit(): Promise<void> {
+async function startTopUp(): Promise<void> {
     if (!isValidAmount.value || isProcessing.value) {
         return;
     }
@@ -45,7 +45,7 @@ async function initiateDeposit(): Promise<void> {
     isProcessing.value = true;
 
     router.post(
-        WalletController.deposit.url(),
+        WalletTopUpController.store.url(),
         { amount: amountNumber.value },
         {
             preserveScroll: true,
@@ -84,11 +84,13 @@ async function initiateDeposit(): Promise<void> {
     <div
         class="rounded-xl border border-outline-variant bg-surface-container-lowest p-5 md:p-6"
     >
-        <h3 class="text-lg font-semibold text-on-surface">Buy points</h3>
+        <h3 class="text-lg font-semibold text-on-surface">Top up</h3>
         <p class="mt-1 text-sm text-on-surface-variant">
-            Pay with Paystack. Min ₦{{
-                walletConfig.min_deposit_naira.toLocaleString()
-            }}, max ₦{{ walletConfig.max_deposit_naira.toLocaleString() }}.
+            Enter any amount and get
+            {{ walletConfig.points_per_naira.toLocaleString() }} points per ₦1.
+            Min ₦{{ walletConfig.min_deposit_naira.toLocaleString() }}, max ₦{{
+                walletConfig.max_deposit_naira.toLocaleString()
+            }}.
         </p>
 
         <div class="mt-4 flex flex-wrap gap-2">
@@ -111,11 +113,11 @@ async function initiateDeposit(): Promise<void> {
         <div class="mt-4 flex flex-col gap-2">
             <label
                 class="text-xs font-semibold text-on-surface"
-                for="deposit-amount"
+                for="top-up-amount"
                 >Amount (₦)</label
             >
             <input
-                id="deposit-amount"
+                id="top-up-amount"
                 v-model="amount"
                 type="number"
                 :min="walletConfig.min_deposit_naira"
@@ -130,7 +132,7 @@ async function initiateDeposit(): Promise<void> {
                 >
             </p>
             <p class="text-xs text-error italic" v-if="!isValidAmount">
-                Invalid deposit amount. Please enter an amount between ₦{{
+                Please enter an amount between ₦{{
                     walletConfig.min_deposit_naira.toLocaleString()
                 }}
                 and ₦{{ walletConfig.max_deposit_naira.toLocaleString() }}.
@@ -142,7 +144,7 @@ async function initiateDeposit(): Promise<void> {
             :disabled="!isValidAmount || isProcessing"
             data-test="pay-with-paystack-button"
             class="mt-6 flex items-center gap-2 rounded-lg bg-primary px-8 py-3 text-xs font-bold text-on-primary shadow-md transition-all hover:bg-tertiary-container hover:shadow-lg disabled:opacity-60"
-            @click="initiateDeposit"
+            @click="startTopUp"
         >
             <span class="material-symbols-outlined text-sm">payments</span>
             {{ isProcessing ? 'Initializing…' : 'Pay with Paystack' }}
@@ -152,8 +154,8 @@ async function initiateDeposit(): Promise<void> {
             <span class="material-symbols-outlined align-middle text-[14px]"
                 >info</span
             >
-            Points bidden cannot be refunded and wallet credits are
-            non-withdrawable.
+            Top up as often as you like, paid by card or bank transfer. Points
+            bidden cannot be refunded and wallet credits are non-withdrawable.
         </p>
     </div>
 </template>

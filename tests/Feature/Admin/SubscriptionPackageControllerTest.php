@@ -24,10 +24,10 @@ test('admin can view the packages list', function () {
     $admin->assignRole('admin');
 
     SubscriptionPackage::create([
-        'name' => 'Solo',
-        'slug' => 'solo',
-        'renewal_cycle' => PackageRenewalCycle::ONE_OFF,
-        'points_allocated' => 5000,
+        'name' => 'Awoof',
+        'slug' => 'awoof',
+        'renewal_cycle' => PackageRenewalCycle::WEEKLY,
+        'points_allocated' => 6000,
         'price_naira' => 500,
         'is_active' => true,
         'sort_order' => 1,
@@ -61,6 +61,23 @@ test('admin can create a package', function () {
         'slug' => 'jara',
         'points_allocated' => 1500,
     ]);
+});
+
+test('admin cannot create a one-off package', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    $this->actingAs($admin)
+        ->post(route('admin.subscription-packages.store'), [
+            'name' => 'Solo',
+            'slug' => 'solo',
+            'renewal_cycle' => 'one_off',
+            'points_allocated' => 5000,
+            'price_naira' => 500,
+        ])
+        ->assertSessionHasErrors('renewal_cycle');
+
+    $this->assertDatabaseMissing('subscription_packages', ['slug' => 'solo']);
 });
 
 test('admin can update a package', function () {

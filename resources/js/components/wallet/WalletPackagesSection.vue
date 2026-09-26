@@ -123,7 +123,8 @@ function formatDate(value: string | null): string {
             Subscription packages
         </h3>
         <p class="mt-1 text-sm text-on-surface-variant">
-            Pick a package for a fixed points bundle at a set price and cadence.
+            Pick a package for a fixed points bundle, renewed automatically on
+            its cycle.
         </p>
 
         <div
@@ -151,12 +152,7 @@ function formatDate(value: string | null): string {
                         {{ pkg.points_allocated.toLocaleString() }} points
                     </p>
                     <p class="mt-2 text-[10px] text-on-surface-variant">
-                        <template v-if="pkg.renewal_cycle === 'one_off'">
-                            Buy as many times as you like · card or transfer
-                        </template>
-                        <template v-else>
-                            One active subscription at a time · card only
-                        </template>
+                        One active subscription at a time · card only
                     </p>
                 </div>
 
@@ -180,10 +176,8 @@ function formatDate(value: string | null): string {
             <span class="material-symbols-outlined align-middle text-[14px]"
                 >info</span
             >
-            One-off packages (e.g. Solo) are a single purchase you can repeat
-            any time, paid by card or bank transfer. Recurring packages
-            authorize Paystack to charge your saved card automatically on the
-            package's cycle until you cancel, and only allow one active
+            Packages authorize Paystack to charge your saved card automatically
+            on the package's cycle until you cancel, and only allow one active
             subscription at a time. Points bidden cannot be refunded and wallet
             credits are non-withdrawable.
         </p>

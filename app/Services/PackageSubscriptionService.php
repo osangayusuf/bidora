@@ -17,52 +17,41 @@ class PackageSubscriptionService
     ) {}
 
     /**
-     * Start a package purchase: creates a local pending record and
-     * initializes the first charge.
-     *
-     * A recurring package runs on a native Paystack Plan (one per package):
-     * the first charge is card-only, Paystack creates the Subscription and
-     * bills every renewal itself, and `subscription.create` confirms it. A
-     * one-off package is a plain charge open to every payment channel.
+     * Start a package subscription: creates a local pending record and
+     * initializes the first charge against the package's native Paystack
+     * Plan. The first charge is card-only, Paystack creates the Subscription
+     * and bills every renewal itself, and `subscription.create` confirms it.
      *
      * @return array{init: array<string, mixed>, subscription: PointSubscription}|null
      */
     public function subscribe(User $user, SubscriptionPackage $package, ?string $callbackUrl = null): ?array
     {
-        if (! $package->is_active) {
-            throw new InvalidArgumentException('This package is not currently available.');
-        }
-
-        // One-off packages are repeatable purchases, not standing subscriptions,
-        // so a user may buy one any number of times regardless of prior purchases.
-        if ($package->renewal_cycle->isRecurring()) {
-            $alreadyActive = PointSubscription::query()
-                ->where('user_id', $user->id)
-                ->where('subscription_package_id', $package->id)
-                ->whereIn('status', [SubscriptionStatus::PENDING, SubscriptionStatus::ACTIVE, SubscriptionStatus::ATTENTION])
-                ->exists();
-
-            if ($alreadyActive) {
-                throw new InvalidArgumentException('You already have an active subscription to this package.');
-            }
-        }
-
         $interval = $package->renewal_cycle->paystackInterval();
 
-        if ($package->renewal_cycle->isRecurring() && $interval === null) {
+        if (! $package->is_active || $interval === null) {
             throw new InvalidArgumentException('This package is not currently available.');
         }
 
-        $plan = $interval !== null ? $this->ensurePlan($package, $interval) : null;
+        $alreadyActive = PointSubscription::query()
+            ->where('user_id', $user->id)
+            ->where('subscription_package_id', $package->id)
+            ->whereIn('status', [SubscriptionStatus::PENDING, SubscriptionStatus::ACTIVE, SubscriptionStatus::ATTENTION])
+            ->exists();
 
-        if ($interval !== null && $plan === null) {
+        if ($alreadyActive) {
+            throw new InvalidArgumentException('You already have an active subscription to this package.');
+        }
+
+        $plan = $this->ensurePlan($package, $interval);
+
+        if ($plan === null) {
             return null;
         }
 
         $subscription = PointSubscription::create([
             'user_id' => $user->id,
             'subscription_package_id' => $package->id,
-            'paystack_plan_id' => $plan?->id,
+            'paystack_plan_id' => $plan->id,
             'amount_naira' => $package->price_naira,
             'frequency' => $interval,
             'status' => SubscriptionStatus::PENDING,
@@ -72,10 +61,10 @@ class PackageSubscriptionService
             $user,
             (float) $package->price_naira,
             $callbackUrl,
-            $plan?->plan_code,
+            $plan->plan_code,
             ['point_subscription_id' => $subscription->id, 'purpose' => 'package_subscription'],
             // Paystack can only bill a reusable card; transfers can't back a subscription.
-            $plan !== null ? ['card'] : null,
+            ['card'],
         );
 
         if ($init === null) {

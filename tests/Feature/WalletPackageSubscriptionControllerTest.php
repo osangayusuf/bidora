@@ -23,6 +23,7 @@ beforeEach(function () {
 
 test('store initializes the first charge and flashes inline payment data', function () {
     Http::fake([
+        'api.paystack.co/plan' => Http::response(['status' => true, 'data' => ['plan_code' => 'PLN_awoof']], 200),
         'api.paystack.co/transaction/initialize' => Http::response([
             'status' => true,
             'data' => ['access_code' => 'access_abc', 'reference' => 'ref_pkg_store'],
@@ -37,7 +38,9 @@ test('store initializes the first charge and flashes inline payment data', funct
 
     $response->assertRedirect(route('wallet'))
         ->assertInertiaFlash('paystack_init.reference', 'ref_pkg_store')
-        ->assertInertiaFlash('paystack_init.access_code', 'access_abc');
+        ->assertInertiaFlash('paystack_init.access_code', 'access_abc')
+        ->assertInertiaFlash('paystack_init.plan_code', 'PLN_awoof')
+        ->assertInertiaFlash('paystack_init.channels', ['card']);
 
     $subscription = PointSubscription::where('pending_reference', 'ref_pkg_store')->firstOrFail();
 

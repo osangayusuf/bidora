@@ -37,8 +37,8 @@ class WalletPackageSubscriptionController extends Controller
             'amount_kobo' => $package->priceKobo(),
             'email' => $user->email,
             'public_key' => config('services.paystack.public'),
-            'plan_code' => $result['subscription']->plan?->plan_code,
-            'channels' => $result['subscription']->plan !== null ? ['card'] : null,
+            'plan_code' => $result['subscription']->plan->plan_code,
+            'channels' => ['card'],
             'subscription_id' => $result['subscription']->id,
         ]);
 

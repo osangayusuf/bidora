@@ -24,7 +24,7 @@ class WalletPageService
             'max_deposit_naira' => (int) config('points.max_deposit_naira'),
             'deposit_presets' => config('points.deposit_presets', [1000]),
             'paystack_public_key' => config('services.paystack.public'),
-            'one_off_deposits_enabled' => (bool) config('points.one_off_deposits_enabled'),
+            'top_ups_enabled' => (bool) config('points.top_ups.enabled'),
             'recurring_enabled' => (bool) config('points.recurring.enabled'),
             'packages_enabled' => (bool) config('points.packages.enabled'),
         ];

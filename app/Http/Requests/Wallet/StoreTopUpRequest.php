@@ -5,7 +5,7 @@ namespace App\Http\Requests\Wallet;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class DepositRequest extends FormRequest
+class StoreTopUpRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -31,8 +31,8 @@ class DepositRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'amount.min' => 'The minimum deposit is ₦'.number_format((float) config('points.min_deposit_naira')),
-            'amount.max' => 'The maximum deposit is ₦'.number_format((float) config('points.max_deposit_naira')),
+            'amount.min' => 'The minimum top-up is ₦'.number_format((float) config('points.min_deposit_naira')),
+            'amount.max' => 'The maximum top-up is ₦'.number_format((float) config('points.max_deposit_naira')),
         ];
     }
 }

@@ -38,6 +38,7 @@ use App\Http\Controllers\TrendingController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WalletPackageSubscriptionController;
 use App\Http\Controllers\WalletSubscriptionController;
+use App\Http\Controllers\WalletTopUpController;
 use App\Http\Controllers\WinnersController;
 use App\Http\Middleware\EnsureTermsAccepted;
 use Illuminate\Support\Facades\Route;
@@ -74,7 +75,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('wallet', [WalletController::class, 'index'])->name('wallet');
     Route::get('wallet/payment/callback', [WalletController::class, 'paymentCallback'])->name('wallet.payment.callback');
-    Route::post('wallet/deposit', [WalletController::class, 'deposit'])->name('wallet.deposit');
+    Route::post('wallet/top-ups', [WalletTopUpController::class, 'store'])->name('wallet.top-ups.store');
     Route::post('wallet/subscriptions', [WalletSubscriptionController::class, 'store'])->name('wallet.subscriptions.store');
     Route::delete('wallet/subscriptions/{subscription}', [WalletSubscriptionController::class, 'destroy'])->name('wallet.subscriptions.destroy');
     Route::get('wallet/subscriptions/{subscription}/manage-card', [WalletSubscriptionController::class, 'manageCard'])->name('wallet.subscriptions.manage-card');

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Enums\ActivityType;
 use App\Http\Requests\Wallet\ClaimBonusRequest;
-use App\Http\Requests\Wallet\DepositRequest;
 use App\Http\Resources\PaystackPlanResource;
 use App\Http\Resources\PointSubscriptionResource;
 use App\Http\Resources\PointTransactionResource;
@@ -12,6 +11,7 @@ use App\Http\Resources\SubscriptionPackageResource;
 use App\Services\ActivityService;
 use App\Services\PaystackService;
 use App\Services\RecurringPaymentService;
+use App\Services\TopUpService;
 use App\Services\WalletPageService;
 use App\Services\WalletService;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +27,7 @@ class WalletController extends Controller
         private readonly PaystackService $paystackService,
         private readonly ActivityService $activityService,
         private readonly RecurringPaymentService $recurringPaymentService,
+        private readonly TopUpService $topUpService,
     ) {}
 
     public function index(Request $request): Response
@@ -58,32 +59,6 @@ class WalletController extends Controller
         ]);
     }
 
-    public function deposit(DepositRequest $request): RedirectResponse
-    {
-        $user = $request->user();
-        $amount = (float) $request->validated('amount');
-
-        $callbackUrl = route('wallet.payment.callback');
-
-        $data = $this->paystackService->initializeTransaction($user, $amount, $callbackUrl);
-
-        if ($data === null) {
-            return back()->withErrors([
-                'amount' => 'Unable to initialize payment. Please try again.',
-            ]);
-        }
-
-        Inertia::flash('paystack_init', [
-            'reference' => $data['reference'],
-            'access_code' => $data['access_code'] ?? null,
-            'amount_kobo' => (int) ($amount * 100),
-            'email' => $user->email,
-            'public_key' => config('services.paystack.public'),
-        ]);
-
-        return back();
-    }
-
     public function paymentCallback(Request $request): RedirectResponse
     {
         $reference = $request->string('reference')->toString();
@@ -108,9 +83,10 @@ class WalletController extends Controller
             abort(403);
         }
 
-        $subscription = $this->recurringPaymentService->resolveSubscriptionForCharge($paystackData);
+        $topUp = $this->topUpService->resolveForCharge($paystackData);
+        $subscription = $topUp === null ? $this->recurringPaymentService->resolveSubscriptionForCharge($paystackData) : null;
 
-        $transaction = $this->walletService->finalizePaystackDeposit($user, $reference, $paystackData, $subscription?->id);
+        $transaction = $this->walletService->finalizePaystackDeposit($user, $reference, $paystackData, $subscription?->id, $topUp?->id);
 
         if ($transaction !== null && $transaction->wasRecentlyCreated) {
             $this->activityService->log(ActivityType::POINTS_DEPOSITED, $user, $transaction);

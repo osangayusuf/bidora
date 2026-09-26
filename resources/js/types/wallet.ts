@@ -12,7 +12,7 @@ export type WalletConfig = {
     max_deposit_naira: number;
     deposit_presets: number[];
     paystack_public_key: string;
-    one_off_deposits_enabled: boolean;
+    top_ups_enabled: boolean;
     recurring_enabled: boolean;
     packages_enabled: boolean;
 };

@@ -2,7 +2,7 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import OnboardingController from '@/actions/App/Http/Controllers/OnboardingController';
 import WalletBalanceCards from '@/components/wallet/WalletBalanceCards.vue';
-import WalletDepositForm from '@/components/wallet/WalletDepositForm.vue';
+import WalletTopUpForm from '@/components/wallet/WalletTopUpForm.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import { profile } from '@/routes';
 import type { WalletBalances, WalletConfig } from '@/types/wallet';
@@ -196,7 +196,7 @@ defineProps<{
                         :balances="balances"
                         :wallet-config="walletConfig"
                     />
-                    <WalletDepositForm :wallet-config="walletConfig" />
+                    <WalletTopUpForm :wallet-config="walletConfig" />
                 </div>
             </div>
 
